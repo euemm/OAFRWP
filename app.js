@@ -12,6 +12,230 @@ const __budgetFileName = 'budget.csv'
 import os from 'os'
 import axios from 'axios'
 
+app.put('/cancel/:timestamp', (req, res) => {
+
+	new Promise((resolve, reject) => {
+
+		fs.copyFileSync(`${__dirname}/${__filename}`, `${__dirname}/tmp.csv`)
+
+		let timestamp = undefined
+		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject() }
+
+		let email = undefined
+		let title
+		let amount
+		let author
+		let authorORCiD
+		let collab
+		let journal
+		let journalISSN
+		let publisher
+		let status
+		let type
+		let DOI
+		let comment
+		let OAstatus = "CACNELLED" 	//APPROVED, PAID, CANCELLED, TRANSACTION PLANNED
+
+		fs.readFile(`${__dirname}/${__budgetFileName}`, 'utf8', (err, data) => {
+
+			if (err) { reject() }
+
+			const lines = data.trim().split(os.EOL)
+
+			if (lines.length == 1) {
+
+				reject()
+
+			}
+
+			let file = []
+
+			for (const i of lines) {
+
+				file.push(i.split(","))
+
+			}
+
+			let edit = false
+
+			for (let i = 1; i < file.length; i ++) {
+
+				if (file[i][0] === timestamp) {
+
+					edit = true
+
+					email = file[i][1]
+					title = file[i][2]
+                    amount = file[i][3]
+                    author = file[i][4]
+                    authorORCiD = file[i][5]
+                    collab = file[i][6]
+                    collabORCiD = file[i][7]
+                    journal = file[i][8]
+                    journalISSN = file[i][9]
+                    publisher = file[i][10]
+                    status = file[i][11]
+                    type = file[i][12]
+                    DOI = file[i][13]
+                    comment = file[i][14]
+					//OAstatus is already set as Cancelled
+
+					file[i] = [
+                        timestamp,
+                        email,
+                        title,
+                        amount,
+                        author,
+                        authorORCiD,
+                        collab,
+                        collabORCiD,
+                        journal,
+                        journalISSN,
+                        publisher,
+                        status,
+                        type,
+                        DOI,
+                        comment,
+                        OAstatus
+                    ]
+
+				}
+
+			}
+
+			if (edit) {
+
+				let output = []
+
+				for (const i of file) {
+
+					output.push(i.join(","))
+
+				}
+
+				fs.writeFile(`${__dirname}/${__filename}`, output.join(os.EOL), (err) => {
+
+					if (err) { reject() }
+
+					resolve()
+
+				})
+				
+			} else {
+
+				reject()
+
+			}
+
+		})
+
+	}).then(() => {
+
+		try {
+
+			axios.put(`http://localhost:${port}/updateBudget/${amount}`) //Once updated, it sends query to itself for budget update.
+
+			res.status(200).send(200)
+
+		} catch (e) {
+
+			fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)		
+
+			res.status(400).send(e)
+
+		}
+
+	}, () => {
+
+		fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)
+
+		res.status(400).send(400)
+
+	})
+
+})
+
+app.put('/planned/:timestamp', (req,res) => {
+
+	new Promise(async (resolve, reject) => {
+		
+		let res = undefined
+		
+		try {
+			
+			res = await axios.put(`http://localhost:${port}/update/${req.params.timestamp}?OAstatus=TRANSACTIONS_PLANNED`)
+		
+		} catch (e) {
+
+			reject(e)
+
+		}
+
+		if (res) {
+
+			if (res.status == 200) {
+
+				resolve()
+
+			}
+
+		}
+
+		reject()
+
+	}).then(() => {
+
+		res.status(200).send(200)
+
+	},() => {
+		
+		res.status(400).send(400)
+
+	})
+
+})
+
+app.put('/paid/:timestamp', (req,res) => {
+
+	new Promise(async (resolve, reject) => {
+		
+		let res = undefined
+		
+		try {
+			
+			res = await axios.put(`http://localhost:${port}/update/${req.params.timestamp}?OAstatus=PAID`)
+		
+		} catch (e) {
+
+			reject(e)
+
+		}
+
+		if (res) {
+
+			if (res.status == 200) {
+
+				resolve()
+
+			}
+
+		}
+
+		reject()
+
+	}).then(() => {
+
+		res.status(200).send(200)
+
+	},() => {
+		
+		res.status(400).send(400)
+
+	})
+
+})
+
+
 //Approves one specific line
 //query goes like
 // [PUT] /approve/2025-08-06T18:47:06.370Z
@@ -65,7 +289,7 @@ app.put('/approve/:timestamp', (req, res) => {
 
                 if (file[i][0] === timestamp) {
 
-                    edit = true;
+                    edit = true
 
                     email = file[i][1]
                     title = file[i][2]
@@ -135,11 +359,13 @@ app.put('/approve/:timestamp', (req, res) => {
 
         try {
         
-            axios.put(`http://localhost:${port}/updateBudget/-${amount}`) //Once updated, its sends query to itself for budget update.
+            axios.put(`http://localhost:${port}/updateBudget/-${amount}`) //[NOTICE THE NEGATIVE SIGN] Once updated, its sends query to itself for budget update.
         
             res.status(200).send(200)
 
         } catch (error) {
+
+			fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)
 
             res.status(400).send(error)
 
