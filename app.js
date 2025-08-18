@@ -36,6 +36,12 @@ app.get('/fail', (req, res) => {
 
 })
 
+app.get('/requests', (req, res) => {
+
+    res.render('requests', {title: 'requests', message: 'requests'})
+
+})
+
 /*
 //settings for sending emails
 import nodemailer from 'nodemailer'
@@ -67,6 +73,22 @@ app.get('/test/email', (req, res) => {
 //timestamp param is mandatory
 app.put('/cancel/:timestamp', (req, res) => {
 
+    let email
+    let title
+    let amount
+    let author
+    let authorORCiD
+    let collab
+    let collabORCiD
+    let journal
+    let journalISSN
+    let publisher
+    let status
+    let type
+    let DOI
+    let comment
+    let OAstatus = "CACNELLED" 	//APPROVED, PAID, CANCELLED, TRANSACTION PLANNED
+
 	new Promise((resolve, reject) => {
 
 		fs.copyFileSync(`${__dirname}/${__filename}`, `${__dirname}/tmp.csv`)
@@ -74,22 +96,7 @@ app.put('/cancel/:timestamp', (req, res) => {
 		let timestamp = undefined
 		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject() }
 
-		let email = undefined
-		let title
-		let amount
-		let author
-		let authorORCiD
-		let collab
-		let journal
-		let journalISSN
-		let publisher
-		let status
-		let type
-		let DOI
-		let comment
-		let OAstatus = "CACNELLED" 	//APPROVED, PAID, CANCELLED, TRANSACTION PLANNED
-
-		fs.readFile(`${__dirname}/${__budgetFileName}`, 'utf8', (err, data) => {
+		fs.readFile(`${__dirname}/${__filename}`, 'utf8', (err, data) => {
 
 			if (err) { reject() }
 
@@ -194,7 +201,7 @@ app.put('/cancel/:timestamp', (req, res) => {
 
 			fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)		
 
-			res.status(400).send(e)
+			res.status(400).send('e')
 
 		}
 
@@ -295,37 +302,47 @@ app.put('/paid/:timestamp', (req,res) => {
 //timestamp param is mandatory
 app.put('/approve/:timestamp', (req, res) => {
 
+    let email = undefined			//author email
+    let title = undefined			//title of article
+    let amount = undefined			//amount requested from the fund
+    let author = undefined			//name of the author
+    let authorORCiD = undefined		//ORCiD of the author
+    let collab = undefined			//name of the collaborating author(s) //THIS COULD BE A LIST OF PEOPLE
+    let collabORCiD = undefined		//ORCiD of the collaborating author(s) //OPTIONAL
+    let journal = undefined			//name of the journal the article was submitted to
+    let journalISSN = undefined		//ISSN of the journal
+    let publisher = undefined		//name of the publisher
+    let status = undefined			//????
+    let type = undefined			//publication type (research article, cover image, open access book, article commentary, review article, rapid communication, or OTHERS)
+    let DOI = undefined				//DOI //OPTIONAL
+    let comment = undefined	        //comment to the library publishing team
+    let OAstatus = 'APPROVED'       //ARPROVED, PAID, CANCELLED, TRANSACTIONS PLANNED
+
     new Promise((resolve, reject) => {
 
         fs.copyFileSync(`${__dirname}/${__filename}`, `${__dirname}/tmp.csv`)
     
         let timestamp = undefined
-        if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject() }
+        if (req.params.timestamp) { 
+            timestamp = req.params.timestamp 
+            console.log(timestamp)
+        } else { 
+            console.log('asdfasdf')
+            reject() 
+        }
 
-        let email = undefined			//author email
-		let title = undefined			//title of article
-		let amount = undefined			//amount requested from the fund
-		let author = undefined			//name of the author
-		let authorORCiD = undefined		//ORCiD of the author
-		let collab = undefined			//name of the collaborating author(s) //THIS COULD BE A LIST OF PEOPLE
-		let collabORCiD = undefined		//ORCiD of the collaborating author(s) //OPTIONAL
-		let journal = undefined			//name of the journal the article was submitted to
-		let journalISSN = undefined		//ISSN of the journal
-		let publisher = undefined		//name of the publisher
-		let status = undefined			//????
-		let type = undefined			//publication type (research article, cover image, open access book, article commentary, review article, rapid communication, or OTHERS)
-		let DOI = undefined				//DOI //OPTIONAL
-		let comment = undefined	        //comment to the library publishing team
-        let OAstatus = 'APPROVED'       //ARPROVED, PAID, CANCELLED, TRANSACTIONS PLANNED
+        fs.readFile(`${__dirname}/${__filename}`, 'utf8', (err, data) => {
 
-        fs.readFile(`${__dirname}/${__budgetFileName}`, 'utf8', (err, data) => {
-
-            if (err) { reject() }
+            if (err) { 
+                // console.log(err)
+                reject() 
+            }
 
             const lines = data.trim().split(os.EOL)
 
             if (lines.length == 1) {
 
+                console.log('there is no request??')
                 reject()
 
             }
@@ -340,7 +357,9 @@ app.put('/approve/:timestamp', (req, res) => {
 
             for (let i = 1; i < file.length; i ++) {
 
-                if (file[i][0] === timestamp) {
+                // console.log(file[i][0])
+
+                if (file[i][0] == timestamp) {
 
                     edit = true
 
@@ -394,13 +413,16 @@ app.put('/approve/:timestamp', (req, res) => {
 
                 fs.writeFile(`${__dirname}/${__filename}`, output.join(os.EOL), (err) => {
 
-                if (err) { reject() }
+                if (err) { 
+                    // console.log(err)
+                    reject() 
+                }
 
                 resolve()
 
-            })
+            }) } else {
 
-            } else {
+                console.log('never edited')
 
                 reject()
 
@@ -419,6 +441,8 @@ app.put('/approve/:timestamp', (req, res) => {
         } catch (error) {
 
 			fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)
+
+            // console.log(error)
 
             res.status(400).send(error)
 
@@ -465,7 +489,7 @@ app.put('/updateBudget/:amount', (req, res) => {
             
             } else {
 
-                totalAmount = lines[lines.length -1].split(",")[1] + changeAmount
+                totalAmount = String(Number(lines[lines.length -1].split(",")[1]) + Number(changeAmount))
 
             }
 
@@ -504,7 +528,7 @@ app.put('/updateBudget/:amount', (req, res) => {
 // /setBudget/0&reason=budget cut
 //this is used to set initial budget or huge change in total budget
 //amount param is mandatory and reason query is optional ('set budget' by default)
-app.post('/setBudget/:amount', (req, res) => {
+app.get('/setBudget/:amount', (req, res) => {
 
     new Promise((resolve, reject) => {
 

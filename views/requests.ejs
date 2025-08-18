@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= typeof pageTitle !== 'undefined' ? pageTitle : 'OA Requests' %></title>
+  <style>
+    :root { --radius: 16px; --gap: 12px; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: #fff; /* white background */
+      color: #111;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      line-height: 1.45;
+    }
+    .wrapper {
+      min-height: 100vh;
+      display: grid;
+      padding: 24px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: var(--radius);
+      box-shadow: 0 1px 6px rgba(0,0,0,.06);
+      padding: 20px;
+    }
+    header {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px;
+    }
+    h1 { margin: 0; font-size: 1.4rem; }
+    .actions { display: flex; gap: 8px; }
+    button, .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 8px 12px; border: 1px solid #ddd; background: #111; color: #fff; border-radius: 999px; font-weight: 700; cursor: pointer;
+    }
+    button.ghost { background: #fff; color: #111; }
+    .status { font-weight: 700; padding: 4px 8px; border-radius: 999px; border: 1px solid #eee; }
+    .table-wrap { overflow: auto; border: 1px solid #eee; border-radius: 12px; }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 900px; }
+    thead th { position: sticky; top: 0; background: #fafafa; border-bottom: 1px solid #eee; text-align: left; padding: 10px; font-size: .9rem; }
+    tbody td { border-bottom: 1px solid #f1f1f1; padding: 10px; vertical-align: top; font-size: .95rem; }
+    tbody tr:hover { background: #fcfcfc; }
+    .nowrap { white-space: nowrap; }
+    .small { font-size: .85rem; color: #444; }
+    .actions-cell { min-width: 540px; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <section class="card">
+      <header>
+        <h1>Open Access Fund Requests</h1>
+        <div class="actions">
+          <button class="ghost" id="refreshBtn">Refresh</button>
+        </div>
+      </header>
+      <div id="status" class="small">Loading…</div>
+
+      <div class="table-wrap">
+        <table id="requestsTable" aria-describedby="status">
+          <thead id="thead"></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      const fetchUrl = "<%= typeof fetchUrl !== 'undefined' ? fetchUrl : 'http://localhost:3000/fetch' %>";
+
+      // Base endpoints per action (no trailing slash). We'll append /:timestamp at runtime.
+      const endpoints = {
+        APPROVED: "<%= typeof approveUrl !== 'undefined' ? approveUrl.replace(/\/$/, '') : 'http://localhost:3000/approve' %>",
+        DENIED: "<%= typeof denyUrl !== 'undefined' ? denyUrl.replace(/\/$/, '') : 'http://localhost:3000/deny' %>",
+        CANCELLED: "<%= typeof cancelUrl !== 'undefined' ? cancelUrl.replace(/\/$/, '') : 'http://localhost:3000/cancel' %>",
+        PAID: "<%= typeof paidUrl !== 'undefined' ? paidUrl.replace(/\/$/, '') : 'http://localhost:3000/paid' %>",
+        PAYMENT_PLANNED: "<%= typeof paymentPlannedUrl !== 'undefined' ? paymentPlannedUrl.replace(/\/$/, '') : 'http://localhost:3000/planned' %>",
+        // CUSTOM: "<%= typeof customUrl !== 'undefined' ? customUrl.replace(/\/$/, '') : 'http://localhost:3000/update-status' %>" // used by More…
+      };
+
+      const statusEl = document.getElementById('status');
+      const thead = document.getElementById('thead');
+      const tbody = document.getElementById('tbody');
+      const refreshBtn = document.getElementById('refreshBtn');
+
+      refreshBtn.addEventListener('click', loadData);
+
+      function fmtDate(iso) {
+        try { return new Date(iso).toLocaleString(); } catch { return iso; }
+      }
+
+      function normalizeUnicode(v) {
+        try { return String(v).normalize('NFC'); } catch { return String(v); }
+      }
+
+      function renderTable(rows) {
+        if (!Array.isArray(rows) || rows.length === 0) {
+          thead.innerHTML = '';
+          tbody.innerHTML = '<tr><td class="small">No data.</td></tr>';
+          return;
+        }
+
+        const cols = Array.from(new Set(rows.flatMap(r => Object.keys(r))));
+        const prefer = [
+          'Timestamp','Email Address','Title of Article / Chapter / Book','Amount requested from open access fund',
+          'Corresponding Author Name','Corresponding Author ORCiD','Collaborating Author List','Collaborating Author ORCiD List (Optional)',
+          'Title of Journal','Journal ISSN','Publisher','Article Status','Publication Type','DOI (if applicable)','Comment to library publishing team','OA fund status'
+        ];
+        cols.sort((a,b)=>{
+          const ia = prefer.indexOf(a), ib = prefer.indexOf(b);
+          if (ia === -1 && ib === -1) return a.localeCompare(b);
+          if (ia === -1) return 1; if (ib === -1) return -1; return ia - ib;
+        });
+
+        thead.innerHTML = '<tr>' +
+          cols.map(c => `<th>${c}</th>`).join('') +
+          '<th class="nowrap">Actions</th>' +
+        '</tr>';
+
+        const frag = document.createDocumentFragment();
+        rows.forEach((row) => {
+          const tr = document.createElement('tr');
+          cols.forEach(col => {
+            const td = document.createElement('td');
+            let val = row[col];
+            if (col === 'Timestamp' && val) val = fmtDate(val);
+            td.textContent = (val == null ? '' : String(val));
+            if (col === 'OA fund status') td.classList.add('nowrap');
+            tr.appendChild(td);
+          });
+
+          const tdAct = document.createElement('td');
+          tdAct.className = 'actions-cell';
+          tdAct.append(
+            makeActionBtn('Approve', endpoints.APPROVED, row), ' ',
+            makeActionBtn('Deny', endpoints.DENIED, row), ' ',
+            makeActionBtn('Cancelled', endpoints.CANCELLED, row), ' ',
+            makeActionBtn('Paid', endpoints.PAID, row), ' ',
+            makeActionBtn('Payment Planned', endpoints.PAYMENT_PLANNED, row), ' ',
+            // makeMoreBtn(endpoints.CUSTOM, row)
+          );
+          tr.appendChild(tdAct);
+          frag.appendChild(tr);
+        });
+        tbody.innerHTML = '';
+        tbody.appendChild(frag);
+      }
+
+      function makeActionBtn(label, endpoint, row) {
+        const btn = document.createElement('button');
+        btn.className = 'btn';
+        btn.textContent = label;
+        btn.addEventListener('click', async () => {
+          await hitActionEndpoint(endpoint, row, btn);
+        });
+        return btn;
+      }
+
+    //   function makeMoreBtn(endpoint, row) {
+    //     const btn = document.createElement('button');
+    //     btn.className = 'btn ghost';
+    //     btn.textContent = 'More…';
+    //     btn.addEventListener('click', async () => {
+    //       const custom = prompt('Enter a custom status value:');
+    //       if (!custom) return;
+    //       await hitActionEndpoint(endpoint, row, btn, [custom]);
+    //     });
+    //     return btn;
+    //   }
+
+      function encodeSegAllowColon(s) {
+        const str = normalizeUnicode(s);
+        // Encode as a URL path segment but keep ':' literal (RFC 3986 allows ':' in path segment)
+        return encodeURIComponent(str).replace(/%3A/gi, ':');
+      }
+
+      function joinPath(base, ...segments) {
+        const b = base.replace(/\/$/, '');
+        const tail = segments.map(encodeSegAllowColon).join('/');
+        return tail ? b + '/' + tail : b;
+      }
+
+      async function hitActionEndpoint(endpoint, row, btnEl, extraPathSegments = []) {
+        try {
+          btnEl.disabled = true;
+          const ts = row['Timestamp'];
+          if (!ts) { alert('No Timestamp found for this row.'); return; }
+          const url = joinPath(endpoint, ts, ...extraPathSegments);
+          const res = await fetch(url, {
+            method: 'PUT', // PUT with no body; timestamp in path
+            headers: {
+              // Indicate we expect UTF-8 JSON back and prefer UTF-8
+              'Accept': 'application/json; charset=utf-8',
+              'Accept-Charset': 'utf-8'
+            }
+          });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          statusEl.textContent = `Action sent to ${url}`;
+        } catch (err) {
+          alert('Action failed: ' + err.message);
+        } finally {
+          btnEl.disabled = false;
+          loadData();
+        }
+      }
+
+      async function loadData() {
+        statusEl.textContent = 'Loading…';
+        try {
+          const res = await fetch(fetchUrl, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json; charset=utf-8',
+              'Accept-Charset': 'utf-8'
+            }
+          });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          renderTable(Array.isArray(data) ? data : []);
+          statusEl.textContent = `Loaded ${Array.isArray(data) ? data.length : 0} record(s).`;
+        } catch (err) {
+          statusEl.textContent = 'Failed to load: ' + err.message;
+          thead.innerHTML = '';
+          tbody.innerHTML = '';
+        }
+      }
+
+      // Initial load
+      loadData();
+    })();
+  </script>
+</body>
+</html>
