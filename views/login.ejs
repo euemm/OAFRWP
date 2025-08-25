@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= typeof pageTitle !== 'undefined' ? pageTitle : 'Login' %></title>
+  <style>
+    :root { --radius: 16px; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: #fff; color: #111;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      line-height: 1.45; display: grid; place-items: center; padding: 24px;
+    }
+    .card { width: min(560px, 100%); background: #fff; border: 1px solid #eee; border-radius: var(--radius);
+      box-shadow: 0 1px 6px rgba(0,0,0,.06); padding: 24px; text-align: center; }
+    h1 { margin: 0 0 12px; font-size: 1.4rem; }
+    p.note { margin: 0 0 16px; color: #555; }
+    form { display: grid; gap: 14px; justify-items: center; }
+    .row { width: 100%; display: grid; gap: 6px; }
+    input[type="text"], input[type="password"] {
+      width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 12px; background: #fff;
+    }
+    button { padding: 10px 14px; border: 0; border-radius: 999px; background: #111; color: #fff; font-weight: 700; cursor: pointer; }
+    .status { margin-top: 8px; color: #444; font-size: .95rem; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Login</h1>
+    <p class="note">Enter your ID and password.</p>
+
+    <form id="loginForm" action="<%= typeof loginUrl !== 'undefined' ? loginUrl : 'http://localhost:3000/login' %>" method="post" aria-describedby="status">
+      <div class="row">
+        <label for="userId" style="font-weight:600; text-align:left;">ID</label>
+        <input id="userId" name="id" type="text" required placeholder="your-id" />
+      </div>
+      <div class="row">
+        <label for="password" style="font-weight:600; text-align:left;">Password</label>
+        <input id="password" name="password" type="password" required placeholder="••••••••" />
+      </div>
+      <button type="submit">Sign in</button>
+      <output id="status" class="status" role="status" aria-live="polite"></output>
+    </form>
+  </main>
+
+  <script>
+    (function () {
+      const form = document.getElementById('loginForm');
+      const statusEl = document.getElementById('status');
+      const defaultNext = "<%= typeof nextUrl !== 'undefined' ? nextUrl : 'http://localhost:3000/requests' %>";
+      const nextFromQuery = new URLSearchParams(location.search).get('next');
+      const nextUrl = nextFromQuery || defaultNext;
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        statusEl.textContent = 'Signing in…';
+        const btn = form.querySelector('button[type="submit"]');
+        if (btn) btn.disabled = true;
+
+        const payload = {
+          id: form.userId.value.trim(),
+          pass: form.password.value
+        };
+
+        try {
+          const res = await fetch(form.action, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json; charset=utf-8' },
+            credentials: 'include', // allow server to set HttpOnly cookie
+            body: JSON.stringify(payload)
+          });
+
+          if (res.status === 401) throw new Error('Invalid credentials');
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+
+          // At this point the server has set the HttpOnly cookie. Navigate to the next page.
+          window.location.href = nextUrl;
+        } catch (err) {
+          statusEl.textContent = 'Login failed: ' + err.message;
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -69,6 +69,30 @@
   </div>
 
   <script>
+    function getTokenFromCookie() {
+      try {
+        return document.cookie
+          .split(';')
+          .map(s => s.trim())
+          .filter(Boolean)
+          .map(s => s.split('='))
+          .reduce((acc, [k,v]) => (acc[decodeURIComponent(k)] = decodeURIComponent(v || ''), acc), {})['token'] || '';
+      } catch (_) { return ''; }
+    }
+
+    // Wrap fetch to auto-attach Authorization: Bearer <token>
+    (function wrapFetchForAuth(){
+      const origFetch = window.fetch.bind(window);
+      window.fetch = (input, init = {}) => {
+        const headers = new Headers((init && init.headers) || {});
+        if (!headers.has('Authorization')) {
+          const t = getTokenFromCookie();
+          if (t) headers.set('Authorization', 'Bearer ' + t);
+        }
+        if (!headers.has('Accept')) headers.set('Accept', 'application/json; charset=utf-8');
+        return origFetch(input, { ...init, headers });
+      };
+    })();
     (function () {
       const fetchUrl = "<%= typeof fetchUrl !== 'undefined' ? fetchUrl : 'http://localhost:3000/fetch' %>";
 

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= typeof pageTitle !== 'undefined' ? pageTitle : 'Upload PDF(s)' %></title>
+  <style>
+    :root { --radius: 16px; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: #fff; color: #111;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      line-height: 1.45; display: grid; place-items: center; padding: 24px;
+    }
+    .card { width: min(640px, 100%); background: #fff; border: 1px solid #eee; border-radius: var(--radius);
+      box-shadow: 0 1px 6px rgba(0,0,0,.06); padding: 24px; text-align: center; }
+    h1 { margin: 0 0 12px; font-size: 1.4rem; }
+    p.note { margin: 0 0 16px; color: #555; }
+    form { display: grid; gap: 14px; justify-items: center; }
+    .row { width: 100%; display: grid; gap: 6px; }
+    input[type="file"], input[type="email"] {
+      width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 12px; background: #fff;
+    }
+    button { padding: 10px 14px; border: 0; border-radius: 999px; background: #111; color: #fff; font-weight: 700; cursor: pointer; }
+    .files-list { text-align: left; font-size: .95rem; margin-top: 4px; color: #333; }
+    .files-list li { margin: 4px 0; }
+    .status { margin-top: 8px; color: #444; font-size: .95rem; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Upload PDF(s)</h1>
+    <p class="note">Enter your email and choose one or more PDF files to upload.</p>
+
+    <form id="uploadForm"
+          action="<%= typeof uploadUrl !== 'undefined' ? uploadUrl : 'http://localhost:3000/upload' %>"
+          method="post" enctype="multipart/form-data" aria-describedby="status">
+
+      <div class="row">
+        <label for="email" style="font-weight:600; text-align:left;">Email <span aria-hidden="true">*</span></label>
+        <input id="email" name="email" type="email" required placeholder="you@example.com" />
+      </div>
+
+      <div class="row">
+        <label for="pdfs" style="font-weight:600; text-align:left;">Select PDF file(s)</label>
+        <input id="pdfs" name="pdfs" type="file" accept="application/pdf" multiple required />
+        <ul id="chosen" class="files-list"></ul>
+      </div>
+
+      <button type="submit">Upload</button>
+      <output id="status" class="status" role="status" aria-live="polite"></output>
+    </form>
+  </main>
+
+  <script>
+    (function () {
+      const form = document.getElementById('uploadForm');
+      const emailInput = document.getElementById('email');
+      const fileInput = document.getElementById('pdfs');
+      const chosen = document.getElementById('chosen');
+      const statusEl = document.getElementById('status');
+
+      const bearerToken = "<%= typeof token !== 'undefined' ? token : '' %>";
+
+      fileInput.addEventListener('change', () => {
+        chosen.innerHTML = '';
+        const frag = document.createDocumentFragment();
+        for (const f of fileInput.files) {
+          const li = document.createElement('li');
+          li.textContent = `${f.name} (${(f.size/1024/1024).toFixed(2)} MB)`;
+          frag.appendChild(li);
+        }
+        chosen.appendChild(frag);
+      });
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = (emailInput.value || '').trim();
+        if (!email) { statusEl.textContent = 'Please enter your email.'; return; }
+        if (!fileInput.files || fileInput.files.length === 0) { statusEl.textContent = 'Please choose at least one PDF.'; return; }
+
+        statusEl.textContent = 'Uploading…';
+
+        // Build FormData directly; server may prefix filenames using req.body.email
+        const fd = new FormData(form);
+
+        const headers = { 'Accept': 'application/json; charset=utf-8' };
+        if (bearerToken) headers['Authorization'] = `Bearer ${bearerToken}`;
+
+        try {
+          const res = await fetch(form.action, { method: 'POST', body: fd, headers });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          // Simpler UX: no links or file list after upload
+          statusEl.textContent = 'Upload complete.';
+          form.reset();
+          chosen.innerHTML = '';
+        } catch (err) {
+          statusEl.textContent = 'Upload failed: ' + err.message;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
