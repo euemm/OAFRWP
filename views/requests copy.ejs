@@ -8,13 +8,27 @@
     :root { --radius: 16px; --gap: 12px; }
     * { box-sizing: border-box; }
     html, body { height: 100%; }
-    body { margin: 0; background: #fff; color: #111; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; line-height: 1.45; }
+    body {
+      margin: 0;
+      background: #fff;
+      color: #111;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      line-height: 1.45;
+    }
 
     /* --- HERO HEADER --- */
-    .hero { height: 180px; background: rgb(18,51,116) center/cover no-repeat; position: relative; display: flex; align-items: center; justify-content: center; }
-    /* .hero { height: 180px; background: url('<%= typeof headerBgUrl !== 'undefined' ? headerBgUrl : '/public/header.jpg' %>') center/cover no-repeat; position: relative; display: flex; align-items: center; justify-content: center; } */
+    .hero {
+      height: 180px;
+      background: url('<%= typeof headerBgUrl !== 'undefined' ? headerBgUrl : '/public/header.jpg' %>') center/cover no-repeat;
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+    }
     .hero::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.28); }
-    .hero-inner { position: relative; z-index: 1; width: min(1200px, 100%); display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 20px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+    .hero-inner {
+      position: relative; z-index: 1; width: min(1200px, 100%);
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 0 20px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.45);
+    }
     .hero h1 { margin: 0; font-size: 1.5rem; }
     .budget-box { text-align: right; }
     .budget-label { display:block; font-size: .9rem; opacity:.9; }
@@ -30,6 +44,14 @@
     button, .btn { display:inline-flex; align-items:center; justify-content:center; padding:8px 12px; border:1px solid #ddd; background:#111; color:#fff; border-radius:999px; font-weight:700; cursor:pointer; }
     button.ghost { background:#fff; color:#111; }
 
+    /* dropdown button */
+    details.drop { position: relative; }
+    details.drop > summary { list-style:none; cursor:pointer; }
+    details.drop[open] > summary { opacity:.9; }
+    details.drop .menu { position:absolute; right:0; top:calc(100% + 6px); background:#fff; border:1px solid #eee; border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,.08); padding:6px; min-width: 180px; z-index: 10; }
+    .menu .menu-item { width:100%; text-align:left; background:#fff; color:#111; border:0; border-radius:8px; padding:8px 10px; }
+    .menu .menu-item:hover { background:#f7f7f7; }
+
     .status { font-weight:700; padding:4px 8px; border-radius:999px; border:1px solid #eee; }
     .table-wrap { overflow:auto; border:1px solid #eee; border-radius:12px; }
     table { width:100%; border-collapse:separate; border-spacing:0; min-width:900px; }
@@ -38,22 +60,15 @@
     tbody tr:hover { background:#fcfcfc; }
     .nowrap { white-space:nowrap; }
     .small { font-size:.85rem; color:#444; }
-    .actions-cell { min-width: 280px; }
-
-    /* status cell highlighting */
-    .paid-bg { background: #e9f7ef; } /* light green */
-
-    /* dropdown (select) style */
-    .action-select { padding: 7px 10px; border-radius: 999px; border: 1px solid #ccc; background: #fff; font-weight: 600; }
-    .action-select:disabled { opacity: .6; }
-    .inline-controls { display:flex; gap:8px; align-items:center; }
+    .actions-cell { min-width: 540px; }
+    .hidden { display:none; }
   </style>
 </head>
 <body>
   <!-- HERO HEADER WITH TOTAL BUDGET (TOP RIGHT) -->
   <header class="hero">
     <div class="hero-inner">
-      <h1>Brandeis Open Access Fund</h1>
+      <h1>Open Access Fund</h1>
       <div class="budget-box">
         <span class="budget-label">Total Budget</span>
         <span id="totalBudget" class="budget-amount">—</span>
@@ -62,11 +77,21 @@
   </header>
 
   <div class="wrapper">
+    <!-- CONTROLS -->
     <section class="card" style="margin-bottom:14px;">
       <header class="section-head">
         <h2>Dashboard</h2>
         <div class="actions">
           <button class="ghost" id="refreshBtn">Refresh</button>
+          <!-- <details class="drop">
+            <summary class="btn ghost">View ▾</summary>
+            <div class="menu">
+              <button type="button" class="menu-item" data-view="requests">Requests</button>
+              <button type="button" class="menu-item" data-view="history">Budget history</button>
+            </div>
+          </details> -->
+          <button type="button" class="menu-item" data-view="requests">Requests</button>
+          <button type="button" class="menu-item" data-view="history">Budget history</button>
           <!-- <button class="ghost" id="historyBtn" type="button">Budget History</button> -->
         </div>
       </header>
@@ -75,7 +100,9 @@
 
     <!-- REQUESTS VIEW -->
     <section id="requestsSection" class="card">
-      <header class="section-head"><h2>Open Access Fund Requests</h2></header>
+      <header class="section-head">
+        <h2>Open Access Fund Requests</h2>
+      </header>
       <div class="table-wrap">
         <table id="requestsTable" aria-describedby="status">
           <thead id="thead"></thead>
@@ -86,7 +113,9 @@
 
     <!-- BUDGET HISTORY VIEW -->
     <section id="historySection" class="card hidden">
-      <header class="section-head"><h2>Budget History</h2></header>
+      <header class="section-head">
+        <h2>Budget History</h2>
+      </header>
       <div class="table-wrap">
         <table aria-describedby="status">
           <thead>
@@ -132,7 +161,7 @@
       const fetchUrl = "<%= typeof fetchUrl !== 'undefined' ? fetchUrl : 'http://localhost:3000/fetch' %>";
       const fetchBudgetUrl = "<%= typeof fetchBudgetUrl !== 'undefined' ? fetchBudgetUrl : 'http://localhost:3000/fetchBudget' %>";
 
-      // Endpoints (no trailing slash). We'll append /:timestamp at runtime.
+      // Base endpoints per action (no trailing slash). We'll append /:timestamp at runtime.
       const endpoints = {
         APPROVED: "<%= typeof approveUrl !== 'undefined' ? approveUrl.replace(/\/$/, '') : 'http://localhost:3000/approve' %>",
         DENIED: "<%= typeof denyUrl !== 'undefined' ? denyUrl.replace(/\/$/, '') : 'http://localhost:3000/deny' %>",
@@ -150,25 +179,32 @@
       const requestsSection = document.getElementById('requestsSection');
       const historySection = document.getElementById('historySection');
       const historyBody = document.getElementById('historyBody');
-      // const historyBtn = document.getElementById('historyBtn');
 
-      // Toggle button: switches between Requests <-> History
-      // historyBtn.addEventListener('click', () => {
-      //   const showHistory = historySection.classList.contains('hidden');
-      //   setView(showHistory ? 'history' : 'requests');
-      // });
+      // View toggles
+      document.querySelectorAll('.menu-item').forEach(btn => btn.addEventListener('click', () => setView(btn.dataset.view)));
+      // document.getElementById('historyBtn').addEventListener('click', () => setView('history'));
       function setView(which) {
         const showHistory = which === 'history';
         requestsSection.classList.toggle('hidden', showHistory);
         historySection.classList.toggle('hidden', !showHistory);
-        // historyBtn.textContent = showHistory ? 'Back to Requests' : 'Budget History';
+        // close dropdown if open
+        const dd = document.querySelector('details.drop');
+        if (dd && dd.open) dd.open = false;
       }
 
-      refreshBtn.addEventListener('click', () => { loadData(); loadBudget(); });
+      refreshBtn.addEventListener('click', () => {
+        loadData();
+        loadBudget();
+      });
 
       function fmtDate(iso) { try { return new Date(iso).toLocaleString(); } catch { return iso; } }
       function normalizeUnicode(v) { try { return String(v).normalize('NFC'); } catch { return String(v); } }
-      function money(n) { const num = Number(n); if (!isFinite(num)) return String(n); try { return new Intl.NumberFormat(undefined, { style:'currency', currency:'USD', maximumFractionDigits:0 }).format(num); } catch { return String(num); } }
+      function money(n) {
+        const num = Number(n);
+        if (!isFinite(num)) return String(n);
+        try { return new Intl.NumberFormat(undefined, { style:'currency', currency:'USD', maximumFractionDigits:0 }).format(num); }
+        catch { return String(num); }
+      }
 
       function renderTable(rows) {
         if (!Array.isArray(rows) || rows.length === 0) {
@@ -184,7 +220,6 @@
         ];
         cols.sort((a,b)=>{ const ia = prefer.indexOf(a), ib = prefer.indexOf(b); if (ia === -1 && ib === -1) return a.localeCompare(b); if (ia === -1) return 1; if (ib === -1) return -1; return ia - ib; });
         thead.innerHTML = '<tr>' + cols.map(c => `<th>${c}</th>`).join('') + '<th class="nowrap">Actions</th>' + '</tr>';
-
         const frag = document.createDocumentFragment();
         rows.forEach((row) => {
           const tr = document.createElement('tr');
@@ -192,20 +227,19 @@
             const td = document.createElement('td');
             let val = row[col];
             if (col === 'Timestamp' && val) val = fmtDate(val);
-            // highlight PAID status
-            if (col === 'OA fund status') {
-              const v = String(val || '').trim().toUpperCase();
-              if (v === 'PAID') td.classList.add('paid-bg');
-            }
             td.textContent = (val == null ? '' : String(val));
             if (col === 'OA fund status') td.classList.add('nowrap');
             tr.appendChild(td);
           });
-
-          // Actions dropdown
           const tdAct = document.createElement('td');
           tdAct.className = 'actions-cell';
-          tdAct.append(makeActionSelect(row));
+          tdAct.append(
+            makeActionBtn('Approve', endpoints.APPROVED, row), ' ',
+            makeActionBtn('Deny', endpoints.DENIED, row), ' ',
+            makeActionBtn('Cancelled', endpoints.CANCELLED, row), ' ',
+            makeActionBtn('Paid', endpoints.PAID, row), ' ',
+            makeActionBtn('Payment Planned', endpoints.PAYMENT_PLANNED, row)
+          );
           tr.appendChild(tdAct);
           frag.appendChild(tr);
         });
@@ -213,59 +247,20 @@
         tbody.appendChild(frag);
       }
 
-      function allowedActionsFor(row) {
-        const raw = row['OA fund status'] ?? row['oa fund status'] ?? row['status'] ?? '';
-        const s = String(raw).trim().toUpperCase();
-        // Map submitted-ish statuses
-        const isSubmitted = s === 'SUBMITTED' || s === '' || s === 'SUBMIT' || s === 'PENDING';
-        if (isSubmitted) return [
-          { label: 'Approve', key: 'APPROVED' },
-          { label: 'Deny',    key: 'DENIED' }
-        ];
-        if (s === 'APPROVED') return [
-          { label: 'Cancel',          key: 'CANCELLED' },
-          { label: 'Paid',            key: 'PAID' },
-          { label: 'Payment Planned', key: 'PAYMENT_PLANNED' }
-        ];
-        if (s === 'PAYMENT PLANNED' || s === 'TRANSACTION_PLANNED' || s === 'PLANNED') return [
-          { label: 'Paid', key: 'PAID' }
-        ];
-        // DENIED / PAID -> no actions
-        return [];
-      }
-
-      function makeActionSelect(row) {
-        const wrap = document.createElement('div');
-        wrap.className = 'inline-controls';
-        const sel = document.createElement('select');
-        sel.className = 'action-select';
-
-        const opts = allowedActionsFor(row);
-        if (!opts.length) {
-          sel.disabled = true;
-          const opt = new Option('No actions', '', true, true);
-          sel.add(opt);
-        } else {
-          sel.add(new Option('Choose…', '', true, true));
-          for (const o of opts) sel.add(new Option(o.label, o.key));
-          sel.addEventListener('change', async () => {
-            const key = sel.value;
-            if (!key) return;
-            // hit endpoint
-            await hitActionEndpoint(endpoints[key], row, sel);
-            sel.value = ''; // reset
-          });
-        }
-        wrap.appendChild(sel);
-        return wrap;
+      function makeActionBtn(label, endpoint, row) {
+        const btn = document.createElement('button');
+        btn.className = 'btn';
+        btn.textContent = label;
+        btn.addEventListener('click', async () => { await hitActionEndpoint(endpoint, row, btn); });
+        return btn;
       }
 
       function encodeSegAllowColon(s) { const str = normalizeUnicode(s); return encodeURIComponent(str).replace(/%3A/gi, ':'); }
       function joinPath(base, ...segments) { const b = base.replace(/\/$/, ''); const tail = segments.map(encodeSegAllowColon).join('/'); return tail ? b + '/' + tail : b; }
 
-      async function hitActionEndpoint(endpoint, row, controlEl, extraPathSegments = []) {
+      async function hitActionEndpoint(endpoint, row, btnEl, extraPathSegments = []) {
         try {
-          controlEl.disabled = true;
+          btnEl.disabled = true;
           const ts = row['Timestamp'];
           if (!ts) { alert('No Timestamp found for this row.'); return; }
           const url = joinPath(endpoint, ts, ...extraPathSegments);
@@ -274,11 +269,7 @@
           statusEl.textContent = `Action sent to ${url}`;
         } catch (err) {
           alert('Action failed: ' + err.message);
-        } finally {
-          controlEl.disabled = false;
-          loadData();
-          loadBudget(); // refresh total + history on every action
-        }
+        } finally { btnEl.disabled = false; loadData(); loadBudget();}
       }
 
       async function loadData() {
@@ -286,8 +277,7 @@
         try {
           const res = await fetch(fetchUrl, { method: 'GET', headers: { 'Accept': 'application/json; charset=utf-8' } });
           if (!res.ok) throw new Error('HTTP ' + res.status);
-          let data = await res.json();
-          data = data.reverse()
+          const data = await res.json();
           renderTable(Array.isArray(data) ? data : []);
           statusEl.textContent = `Loaded ${Array.isArray(data) ? data.length : 0} record(s).`;
         } catch (err) {
@@ -302,15 +292,21 @@
           const res = await fetch(fetchBudgetUrl, { method: 'GET', headers: { 'Accept': 'application/json; charset=utf-8' } });
           if (!res.ok) throw new Error('HTTP ' + res.status);
           const data = await res.json();
-          let arr = Array.isArray(data) ? data : [];
+          const arr = Array.isArray(data) ? data : [];
           if (arr.length) {
+            // last entry's Total Amount is the total budget
             const last = arr[arr.length - 1];
             const total = last && (Number(last['Total Amount']) || Number(last.total) || Number(last.amount));
             totalBudgetEl.textContent = (total != null && isFinite(total)) ? money(total) : 'N/A';
-            arr = arr.reverse()
             renderHistory(arr);
-          } else { totalBudgetEl.textContent = 'N/A'; renderHistory([]); }
-        } catch (e) { totalBudgetEl.textContent = 'N/A'; renderHistory([]); }
+          } else {
+            totalBudgetEl.textContent = 'N/A';
+            renderHistory([]);
+          }
+        } catch (e) {
+          totalBudgetEl.textContent = 'N/A';
+          renderHistory([]);
+        }
       }
 
       function renderHistory(rows) {

@@ -159,7 +159,18 @@ app.get('/fail', auth, (req, res) => {
 //web view to view all the requests
 app.get('/requests', auth, (req, res) => {
 
-	res.render('requests', { title: 'requests', message: 'requests' })
+	// res.render('requests', { title: 'requests', message: 'requests' })
+	res.render('requests', {
+		pageTitle: 'OA Requests',
+		fetchUrl: 'http://localhost:3000/fetch',
+		fetchBudgetUrl: 'http://localhost:3000/fetchBudget',
+		approveUrl: 'http://localhost:3000/approve',
+		denyUrl: 'http://localhost:3000/deny',
+		cancelUrl: 'http://localhost:3000/cancel',
+		paidUrl: 'http://localhost:3000/paid',
+		paymentPlannedUrl: 'http://localhost:3000/planned',
+		headerBgUrl: '/public/header.jpg' // serve this or change the path
+  });
 
 })
 
@@ -520,13 +531,13 @@ app.put('/cancel/:timestamp', auth, (req, res) => {
 
 			for (let i = 1; i < file.length; i++) {
 
-				if (file[i][0] === timestam && file[i][15] === 'APPROVED') {
+				if (file[i][0] === timestamp && file[i][15] === 'APPROVED') {
+
+					if (file[i][15] === 'APPROVED') { amount = file[i][3] }
 
 					file[i][15] = "CANCELLED"
 
 					edit = true
-
-					if (file[i][15] === 'APPROVED') { amount = file[i][3] }
 
 				}
 
@@ -546,15 +557,13 @@ app.put('/cancel/:timestamp', auth, (req, res) => {
 
 					if (err) { reject() }
 
+					console.log('amount is ' + amount)
+
 					resolve(amount)
 
 				})
 
-			} else {
-
-				reject()
-
-			}
+			} else { reject() }
 
 		})
 
@@ -569,7 +578,10 @@ app.put('/cancel/:timestamp', auth, (req, res) => {
 			let changeAmount = undefined
 			let reason = 'CANCELLED'
 
-			if (amount) { changeAmount = Number(amount) } else { reject() }
+			if (amount) { changeAmount = Number(amount) } else { 
+				console.log(amount)
+				reject() 
+			}
 
 			fs.readFile(`${__dirname}/${__budgetFileName}`, 'utf8', (err, data) => {
 
@@ -596,7 +608,10 @@ app.put('/cancel/:timestamp', auth, (req, res) => {
 
 				fs.appendFile(`${__dirname}/${__budgetFileName}`, input.join(",") + os.EOL, (err) => {
 
-					if (err) { reject() }
+					if (err) { 
+						console.log('asdfasdf')
+						reject() 
+					}
 
 					resolve()
 
@@ -610,7 +625,9 @@ app.put('/cancel/:timestamp', auth, (req, res) => {
 
 		}, () => {//if budget update attempt fails
 
-			reject()
+			fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)
+
+			res.status(400).send(400)
 
 		})
 
@@ -678,9 +695,7 @@ app.put('/deny/:timestamp', auth, (req, res) => {
 
 				})
 
-			}
-
-			reject()
+			} else { reject() }
 
 		})
 
@@ -748,9 +763,7 @@ app.put('/planned/:timestamp', auth, (req, res) => {
 
 				})
 
-			}
-
-			reject()
+			} else { reject() }
 
 		})
 
@@ -825,9 +838,11 @@ app.put('/paid/:timestamp', auth, (req, res) => {
 
 				})
 
-			}
+			} else {
 
-			reject()
+				reject()
+
+			}
 
 		})
 
@@ -855,14 +870,14 @@ app.put('/approve/:timestamp', auth, (req, res) => {
 
 	new Promise((resolve, reject) => {
 
-		fs.copyFileSync(`${__dirname}/${__filename}`, `${__dirname}/tmp.csv`)
+		// fs.copyFileSync(`${__dirname}/${__filename}`, `${__dirname}/tmp.csv`)
 
 		let timestamp
 		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject() }
 
 		fs.readFile(`${__dirname}/${__filename}`, 'utf8', (err, data) => {
 
-			if (err) { reject() }
+			if (err) { reject() } 
 
 			const lines = data.trim().split(os.EOL)
 
@@ -898,12 +913,17 @@ app.put('/approve/:timestamp', auth, (req, res) => {
 
 					if (err) { reject() }
 
+					console.log(amount)
+
 					resolve(amount)
 
 				})
-			}
 
-			reject()
+			} else {
+
+				reject()
+
+			}
 
 		})
 
@@ -959,13 +979,13 @@ app.put('/approve/:timestamp', auth, (req, res) => {
 
 		}, () => {//if budget update attempt fails
 
-			reject()
+			res.status(400).send(400)
 
 		})
 
 	}, () => {
 
-		fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)
+		// fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)
 
 		res.status(400).send(400)
 
