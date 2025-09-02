@@ -437,8 +437,8 @@ app.post('/login', async (req, res) => {
 })
 
 //registers user with specific ID and password
-//INDENT THIS METHOD AFTER REGISTERTING USER
-/*
+//TODO : INDENT THIS METHOD AFTER REGISTERTING USER
+
 app.post('/register', async (req, res) => {
 
 	await ensureCredFile()
@@ -464,7 +464,7 @@ app.post('/register', async (req, res) => {
 	res.status(201).json(201)
 
 })
-*/
+
 
 //SMTP CODES
 /*
@@ -502,7 +502,7 @@ app.put('/cancel/:timestamp', auth, (req, res) => {
 
 	new Promise((resolve, reject) => {
 
-		fs.copyFileSync(`${__dirname}/${__filename}`, `${__dirname}/tmp.csv`)
+		// fs.copyFileSync(`${__dirname}/${__filename}`, `${__dirname}/tmp.csv`)
 
 		let timestamp = undefined
 		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject() }
@@ -625,7 +625,7 @@ app.put('/cancel/:timestamp', auth, (req, res) => {
 
 		}, () => {//if budget update attempt fails
 
-			fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)
+			// fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)
 
 			res.status(400).send(400)
 
@@ -633,7 +633,7 @@ app.put('/cancel/:timestamp', auth, (req, res) => {
 
 	}, () => { //if file update fail
 
-		fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)
+		// fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)
 
 		res.status(400).send(400)
 
@@ -650,7 +650,7 @@ app.put('/deny/:timestamp', auth, (req, res) => {
 
 	new Promise(async (resolve, reject) => {
 
-		fs.copyFileSync(path.join(__dirname, __filename), path.join(__dirname, 'tmp.csv'))
+		// fs.copyFileSync(path.join(__dirname, __filename), path.join(__dirname, 'tmp.csv'))
 
 		let timestamp
 		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject() }
@@ -705,7 +705,7 @@ app.put('/deny/:timestamp', auth, (req, res) => {
 
 	}, () => {
 
-		fs.copyFileSync(path.join(__dirname, 'tmp.csv'), path.join(__dirname, __filename))
+		// fs.copyFileSync(path.join(__dirname, 'tmp.csv'), path.join(__dirname, __filename))
 
 		res.status(400).send(400)
 
@@ -718,7 +718,7 @@ app.put('/planned/:timestamp', auth, (req, res) => {
 
 	new Promise(async (resolve, reject) => {
 
-		fs.copyFileSync(path.join(__dirname, __filename), path.join(__dirname, 'tmp.csv'))
+		// fs.copyFileSync(path.join(__dirname, __filename), path.join(__dirname, 'tmp.csv'))
 
 		let timestamp
 		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject() }
@@ -773,7 +773,7 @@ app.put('/planned/:timestamp', auth, (req, res) => {
 
 	}, () => {
 
-		fs.copyFileSync(path.join(__dirname, 'tmp.csv'), path.join(__dirname, __filename))
+		// fs.copyFileSync(path.join(__dirname, 'tmp.csv'), path.join(__dirname, __filename))
 
 		res.status(400).send(400)
 
@@ -789,7 +789,7 @@ app.put('/paid/:timestamp', auth, (req, res) => {
 
 	new Promise(async (resolve, reject) => {
 
-		fs.copyFileSync(path.join(__dirname, __filename), path.join(__dirname, 'tmp.csv'))
+		// fs.copyFileSync(path.join(__dirname, __filename), path.join(__dirname, 'tmp.csv'))
 
 		let timestamp
 		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject() }
@@ -852,7 +852,7 @@ app.put('/paid/:timestamp', auth, (req, res) => {
 
 	}, () => {
 
-		fs.copyFileSync(path.join(__dirname, 'tmp.csv'), path.join(__dirname, __filename))
+		// fs.copyFileSync(path.join(__dirname, 'tmp.csv'), path.join(__dirname, __filename))
 
 		res.status(400).send(400)
 
@@ -1063,7 +1063,7 @@ app.put('/updateBudget/:amount', auth, (req, res) => {
 // /setBudget/0&reason=budget cut
 //this is used to set initial budget or huge change in total budget
 //amount param is mandatory and reason query is optional ('set budget' by default)
-app.get('/setBudget/:amount', auth, (req, res) => {
+app.post('/setBudget/:amount', auth, (req, res) => {
 
 	new Promise((resolve, reject) => {
 
@@ -1131,7 +1131,7 @@ app.put('/update/:timestamp', auth, (req, res) => {
 
 	new Promise((resolve, reject) => {
 
-		fs.copyFileSync(`${__dirname}/${__filename}`, `${__dirname}/tmp.csv`)
+		// fs.copyFileSync(`${__dirname}/${__filename}`, `${__dirname}/tmp.csv`)
 
 		let timestamp = undefined
 
@@ -1241,15 +1241,15 @@ app.put('/update/:timestamp', auth, (req, res) => {
 
 	}).then(() => {	//ON RESOLVE
 
-		res.status(200).send('asdf')
+		res.status(200).send(200)
 
 	}, () => {	//ON REJECT
 
-		fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)
+		// fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)
 
 		// console.log(err)
 
-		res.status(400).send('err')
+		res.status(400).send(400)
 
 	})
 
@@ -1347,11 +1347,11 @@ app.post('/create', (req, res) => {
 
 	}).then(() => {
 
-		res.status(200).send('asdf')
+		res.status(200).send(200)
 
 	}, () => {
 
-		res.status(400).send('err')
+		res.status(400).send(400)
 
 	})
 
