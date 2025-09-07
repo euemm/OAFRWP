@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title><%= typeof pageTitle !== 'undefined' ? pageTitle : 'Login' %></title>
+  <link rel="icon" type="image/png" href="/public/brandeis.png">
+  <link rel="shortcut icon" type="image/png" href="/public/brandeis.png">
   <style>
     :root { --radius: 16px; }
     * { box-sizing: border-box; }
@@ -24,6 +26,45 @@
     }
     button { padding: 10px 14px; border: 0; border-radius: 999px; background: #111; color: #fff; font-weight: 700; cursor: pointer; }
     .status { margin-top: 8px; color: #444; font-size: .95rem; }
+
+    /* Page Navigation */
+    .page-navigation {
+      margin-top: 25px;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+      text-align: center;
+    }
+    .page-navigation h3 {
+      margin: 0 0 12px;
+      color: #666;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .nav-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 16px;
+      background: #f8f9fa;
+      color: #123374;
+      text-decoration: none;
+      border-radius: 8px;
+      border: 1px solid #dee2e6;
+      font-weight: 500;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+    }
+    .nav-btn:hover {
+      background: #e9ecef;
+      border-color: #123374;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
   </style>
 </head>
 <body>
@@ -31,8 +72,8 @@
     <h1>Login</h1>
     <p class="note">Enter your ID and password.</p>
 
-    <!-- <form id="loginForm" action="<%= typeof loginUrl !== 'undefined' ? loginUrl : 'https://localhost:3000/login' %>" method="post" aria-describedby="status"> -->
-    <form id="loginForm" action="<%= typeof loginUrl !== 'undefined' ? loginUrl : 'https://oafund.library.brandeis.edu/login' %>" method="post" aria-describedby="status">
+    <form id="loginForm" action="<%= typeof loginUrl !== 'undefined' ? loginUrl : 'http://localhost:3000/login' %>" method="post" aria-describedby="status">
+    <!-- <form id="loginForm" action="<%= typeof loginUrl !== 'undefined' ? loginUrl : 'https://oafund.library.brandeis.edu/login' %>" method="post" aria-describedby="status"> -->
       <div class="row">
         <label for="userId" style="font-weight:600; text-align:left;">ID</label>
         <input id="userId" name="id" type="text" required placeholder="your-id" />
@@ -44,14 +85,23 @@
       <button type="submit">Sign in</button>
       <output id="status" class="status" role="status" aria-live="polite"></output>
     </form>
+
+    <!-- Navigation Links -->
+    <div class="page-navigation">
+      <h3>Public Services</h3>
+      <div class="nav-buttons">
+        <a href="/" class="nav-btn">Submit Request</a>
+        <a href="/upload" class="nav-btn">Upload Documents</a>
+      </div>
+    </div>
   </main>
 
   <script>
     (function () {
       const form = document.getElementById('loginForm');
       const statusEl = document.getElementById('status');
-      // const defaultNext = "<%= typeof nextUrl !== 'undefined' ? nextUrl : 'https://localhost:3000/requests' %>";
-      const defaultNext = "<%= typeof nextUrl !== 'undefined' ? nextUrl : 'https://oafund.library.brandeis.edu/requests' %>";
+      const defaultNext = "<%= typeof nextUrl !== 'undefined' ? nextUrl : 'http://localhost:3000/requests' %>";
+      // const defaultNext = "<%= typeof nextUrl !== 'undefined' ? nextUrl : 'https://oafund.library.brandeis.edu/requests' %>";
       const nextFromQuery = new URLSearchParams(location.search).get('next');
       const nextUrl = nextFromQuery || defaultNext;
 

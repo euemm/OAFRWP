@@ -4,6 +4,13 @@
 //CSRF TOKEN?? : NO
 //Budget page at the top of the requests page
 
+//constant dec
+const SUBMITTED = 'submitted'
+const APPROVED = 'APPROVED'
+const DENIED = 'DENIED'
+const PAID = 'PAID'
+const PAYMENT_PLANNED = 'PAYMENT_PLANNED'
+const CANCELLED = 'CANCELLED'
 
 //Settings for express server
 import express from 'express'
@@ -11,11 +18,12 @@ const app = express()
 const port = 3000
 
 //Settings for csv file editing
-import fs from 'fs'
+import fs, { stat } from 'fs'
 import { parse } from 'csv-parse'
 const __dirname = new URL(".", import.meta.url).pathname
 const __filename = 'empty.csv'
 const __budgetFileName = 'budget.csv'
+const __urlsFileName = 'urls.csv'
 import os from 'os'
 
 //Settings for web views
@@ -43,8 +51,8 @@ app.use(cookieParser())
 //Settings for apache
 app.set('trust proxy', 1); // if exactly one proxy (Apache) is in front
 
-const LOCAL = 'oafund.library.brandeis.edu'
-// const LOCAL = 'localhost:3000'
+// const LOCAL = 'https://oafund.library.brandeis.edu'
+const LOCAL = 'http://localhost:3000'
 
 //MULTER storage settings like default naming
 const storage = multer.diskStorage({
@@ -84,6 +92,9 @@ function isPDF(file) {
 //settings for req body use of json
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+
+//serve static files from public directory
+app.use('/public', express.static(path.join(__dirname, 'public')))
 
 //settings for viewing files
 const filesRouter = express.Router()
@@ -144,23 +155,23 @@ app.use('/files', auth, filesRouter)
 //web view for the request form
 app.get('/', (req, res) => {
 
-	res.render('index', { title: 'asdf', message: 'hello world' })
+	res.render('index')
 
 })
 
 //web view for successful request submissions
-app.get('/success', auth, (req, res) => {
+// app.get('/success', auth, (req, res) => {
 
-	res.render('success', { title: 'success', message: 'hello world' })
+// 	res.render('success', { title: 'success', message: 'hello world' })
 
-})
+// })
 
 //web view for failed request submissions
-app.get('/fail', auth, (req, res) => {
+// app.get('/fail', auth, (req, res) => {
 
-	res.render('fail', { title: 'fail', message: 'fail' })
+// 	res.render('fail', { title: 'fail', message: 'fail' })
 
-})
+// })
 
 //web view to view all the requests
 app.get('/requests', auth, (req, res) => {
@@ -168,16 +179,34 @@ app.get('/requests', auth, (req, res) => {
 	// res.render('requests', { title: 'requests', message: 'requests' })
 	res.render('requests', {
 		pageTitle: 'OA Requests',
-		fetchUrl: `https://${LOCAL}/fetch`,
-		fetchBudgetUrl: `https://${LOCAL}/fetchBudget`,
-		approveUrl: `https://${LOCAL}/approve`,
-		denyUrl: `https://${LOCAL}/deny`,
-		cancelUrl: `https://${LOCAL}/cancel`,
-		paidUrl: `https://${LOCAL}/paid`,
-		paymentPlannedUrl: `https://${LOCAL}/planned`,
+		fetchUrl: `${LOCAL}/fetch`,
+		fetchBudgetUrl: `${LOCAL}/fetchBudget`,
+		approveUrl: `${LOCAL}/approve`,
+		denyUrl: `${LOCAL}/deny`,
+		cancelUrl: `${LOCAL}/cancel`,
+		paidUrl: `${LOCAL}/paid`,
+		paymentPlannedUrl: `${LOCAL}/planned`,
 		headerBgUrl: `/public/header.jpg`// serve this or change the path
   });
 
+})
+
+//web view to view budget history
+app.get('/budget-history', auth, (req, res) => {
+	res.render('budget-history', {
+		pageTitle: 'Budget History',
+		fetchBudgetUrl: `${LOCAL}/fetchBudget`,
+		headerBgUrl: `/public/header.jpg`// serve this or change the path
+  });
+})
+
+//web view to view all uploaded files
+app.get('/files-page', auth, (req, res) => {
+	res.render('files', {
+		pageTitle: 'Uploaded Files',
+		fetchFilesUrl: `${LOCAL}/files`,
+		headerBgUrl: `/public/header.jpg`// serve this or change the path
+  });
 })
 
 app.get('/upload', (req, res) => {
@@ -204,6 +233,31 @@ app.post('/upload', upload.array('pdfs', 10), (req, res) => {
 	}))
 
 	res.status(201).json({ uploaded: files })
+
+})
+
+app.post('/uploadURL', (req, res) => {
+
+	const url = req.body.url ? req.body.url : ''
+	const email = req.body.email ? req.body.email : ''
+
+	if (!url || url.trim() === '') {
+		return res.status(400).json({ error: 'URL is required' })
+	}
+
+	if (!email || email.trim() === '') {
+		return res.status(400).json({ error: 'Email is required' })
+	}
+	
+	const input = [
+		new Date().toISOString(),
+		url,
+		email
+	]
+
+	fs.appendFileSync(path.join(__dirname, 'urls.csv'), input.join(",") + os.EOL)
+	
+	return res.status(200).json({ message: 'URL uploaded successfully' })
 
 })
 
@@ -536,6 +590,204 @@ app.get('/test/email', (req, res) => {
 })
 */
 
+function backupBudget() {
+
+	fs.copyFileSync(path.join(__dirname, __budgetFileName), path.join(__dirname, `${__budgetFileName}_backup.csv`))
+
+}
+
+function revertBudget() {
+
+	fs.copyFileSync(path.join(__dirname, `${__budgetFileName}_backup.csv`), path.join(__dirname, __budgetFileName))
+
+}
+
+function backupFile() {
+
+	fs.copyFileSync(path.join(__dirname, __filename), path.join(__dirname, `${__filename}_backup.csv`))
+
+}
+
+function revertFile() {
+
+	fs.copyFileSync(path.join(__dirname, `${__filename}_backup.csv`), path.join(__dirname, __filename))
+
+}
+
+function changeRequestStatus(timestamp, status) {
+
+	let amount
+
+	return new Promise((resolve, reject) => {
+
+		fs.readFile(path.join(__dirname, __filename), 'utf8', (err, data) => {
+
+			if (err) { 
+				reject(err) 
+				return
+			}
+
+			const lines = data.trim().split(os.EOL)
+
+			// if (lines.length == 1) { reject() }
+
+			let file = []
+
+			for (const i of lines) { file.push(i.split(",")) }
+
+			let edit = false
+
+			for (let i = 1; i < file.length; i ++) {
+
+				if (file[i][0] === timestamp) {
+
+					if (status == APPROVED && file[i][15] === SUBMITTED) { file[i][15] = APPROVED; edit = true; amount = file[i][3] }
+					if (status == DENIED && file[i][15] === SUBMITTED) { file[i][15] = DENIED; edit = true; amount = file[i][3] }
+					if (status == PAID && file[i][15] === APPROVED) { file[i][15] = PAID; edit = true; amount = file[i][3] }
+					if (status == PAID && file[i][15] === PAYMENT_PLANNED) { file[i][15] = PAID; edit = true; amount = file[i][3] }
+					if (status == CANCELLED && file[i][15] === APPROVED) { file[i][15] = CANCELLED; edit = true; amount = file[i][3] }
+					if (status == PAYMENT_PLANNED && file[i][15] === APPROVED) { file[i][15] = PAYMENT_PLANNED; edit = true; amount = file[i][3] }
+
+					break; // Found the record, exit loop
+
+				}
+
+			}
+
+			if (!edit) {
+				reject('400 No such request found')
+				return
+			}
+
+			if (edit) {
+
+				let output = []
+
+				for (const i of file) { output.push(i.join(",")) }
+
+				fs.writeFile(path.join(__dirname, __filename), output.join(os.EOL), (err) => {
+
+					if (err) { reject('500 error writing file') }
+
+					else { resolve(amount) }
+
+				})
+
+			} else {
+
+				reject('400 Invalid status change')
+
+			}
+
+		})
+
+	}).catch((error) => {
+
+		return false
+
+	})
+
+}
+
+function changeBudgetTotal(amount, reason) {
+
+	return new Promise((resolve, reject) => {
+
+		const timestamp = new Date().toISOString()
+
+		fs.readFile(path.join(__dirname, __budgetFileName), 'utf8', (err, data) => {
+
+			if (err) { 
+				reject(err)
+				return
+			}
+
+			const lines = data.trim().split(os.EOL)
+			let file = []
+
+			for (const i of lines) { file.push(i.split(",")) }
+
+			console.log('Last budget entry:', file[file.length-1])
+
+			let input = [
+				timestamp,
+				Number(Number(file[file.length-1][1]) + Number(amount)),
+				amount,
+				reason,
+				file[file.length-1][4],
+				file[file.length-1][5]
+			]
+
+			fs.appendFile(path.join(__dirname, __budgetFileName), input.join(",") + os.EOL, (err) => {
+
+				if (err) { reject(err) } 
+				
+				else { resolve(true) }
+
+			})
+
+		})
+
+	}).catch((error) => {
+
+		console.log('rejected budget function:', error)
+		return false
+
+	})
+
+}
+
+function changeRunningTotal(amount, reason) {
+
+	return new Promise((resolve, reject) => {
+
+		const timestamp = new Date().toISOString()
+
+		fs.readFile(path.join(__dirname, __budgetFileName), 'utf8', (err, data) => {
+
+			if (err) { 
+				console.log('Error reading budget file for running total:', err)
+				reject(err)
+				return
+			}
+
+			const lines = data.trim().split(os.EOL)
+			let file = []
+
+			for (const i of lines) { file.push(i.split(",")) }
+
+			let input = [
+				timestamp,
+				file[file.length-1][1],
+				file[file.length-1][2],
+				reason,
+				Number(Number(file[file.length-1][4]) + Number(amount)),
+				amount
+			]
+
+			fs.appendFile(path.join(__dirname, __budgetFileName), input.join(",") + os.EOL, (err) => {
+
+				if (err) { 
+					console.log('Error writing running total:', err)
+					reject(err)
+				} else { 
+					console.log('Running total updated successfully')
+					resolve(true)
+				}
+
+			})
+
+		})
+
+	}).catch((error) => {
+
+		console.log('Error in changeRunningTotal:', error)
+		return false
+
+	})
+
+}
+
 //updates the status of request from APPROVED to CANCELLED
 //this adds the budged requested back to the total budget
 //query goes like this
@@ -543,142 +795,48 @@ app.get('/test/email', (req, res) => {
 //timestamp param is mandatory
 app.put('/cancel/:timestamp', auth, (req, res) => {
 
-	let amount = 0
+	new Promise(async (resolve, reject) => {
 
-	new Promise((resolve, reject) => {
+		backupFile(__filename)
 
-		// fs.copyFileSync(`${__dirname}/${__filename}`, `${__dirname}/tmp.csv`)
+		let timestamp
+		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject(); return; }
 
-		let timestamp = undefined
-		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject() }
+		try {
+			const amount = await changeRequestStatus(timestamp, CANCELLED)
 
-		fs.readFile(`${__dirname}/${__filename}`, 'utf8', (err, data) => {
-
-			if (err) { reject() }
-
-			const lines = data.trim().split(os.EOL)
-
-			if (lines.length == 1) {
-
+			if (amount) {
+				resolve({ amount: Number(amount), timestamp })
+			} else {
 				reject()
-
 			}
+		} catch (error) {
+			console.log('Error changing request status:', error)
+			reject()
+		}
 
-			let file = []
+	}).then(async (data) => { //ONCE RESOLVED
 
-			for (const i of lines) {
+		backupBudget()
 
-				file.push(i.split(","))
-
+		try {
+			const result = await changeRunningTotal(-Number(data.amount), `${data.timestamp} ${CANCELLED}`)
+			
+			if (result) {
+				res.status(200).send(200)
+			} else {
+				revertBudget()
+				res.status(400).send(400)
 			}
-
-			let edit = false
-
-			for (let i = 1; i < file.length; i++) {
-
-				if (file[i][0] === timestamp && file[i][15] === 'APPROVED') {
-
-					if (file[i][15] === 'APPROVED') { amount = file[i][3] }
-
-					file[i][15] = "CANCELLED"
-
-					edit = true
-
-				}
-
-			}
-
-			if (edit) {
-
-				let output = []
-
-				for (const i of file) {
-
-					output.push(i.join(","))
-
-				}
-
-				fs.writeFile(`${__dirname}/${__filename}`, output.join(os.EOL), (err) => {
-
-					if (err) { reject() }
-
-					console.log('amount is ' + amount)
-
-					resolve(amount)
-
-				})
-
-			} else { reject() }
-
-		})
-
-	}).then((amount) => { //ONCE RESOLVED
-
-		new Promise((resolve, reject) => {//try updating budget [ADD whatever was requested back to total]
-
-			let date_time = new Date()
-			const timestamp = date_time.toISOString()
-
-			let totalAmount = undefined
-			let changeAmount = undefined
-			let reason = 'CANCELLED'
-
-			if (amount) { changeAmount = Number(amount) } else { 
-				console.log(amount)
-				reject() 
-			}
-
-			fs.readFile(`${__dirname}/${__budgetFileName}`, 'utf8', (err, data) => {
-
-				if (err) { reject() }
-
-				const lines = data.trim().split(os.EOL)
-
-				if (lines.length == 1) {
-
-					totalAmount = changeAmount
-
-				} else {
-
-					totalAmount = String(Number(lines[lines.length - 1].split(",")[1]) + Number(changeAmount))
-
-				}
-
-				let input = [
-					timestamp,
-					totalAmount,
-					changeAmount,
-					reason
-				]
-
-				fs.appendFile(`${__dirname}/${__budgetFileName}`, input.join(",") + os.EOL, (err) => {
-
-					if (err) { 
-						console.log('asdfasdf')
-						reject() 
-					}
-
-					resolve()
-
-				})
-
-			})
-
-		}).then(() => {
-
-			res.status(200).send(200)
-
-		}, () => {//if budget update attempt fails
-
-			// fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)
-
+		} catch (error) {
+			console.log('Error updating running total:', error)
+			revertBudget()
 			res.status(400).send(400)
+		}
 
-		})
+	}, () => {
 
-	}, () => { //if file update fail
-
-		// fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)
+		revertFile()
 
 		res.status(400).send(400)
 
@@ -695,54 +853,23 @@ app.put('/deny/:timestamp', auth, (req, res) => {
 
 	new Promise(async (resolve, reject) => {
 
-		// fs.copyFileSync(path.join(__dirname, __filename), path.join(__dirname, 'tmp.csv'))
+		backupFile()
 
 		let timestamp
-		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject() }
+		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject(); return; }
 
-		fs.readFile(path.join(__dirname, __filename), 'utf8', (err, data) => {
+		try {
+			const result = await changeRequestStatus(timestamp, DENIED)
 
-			if (err) { reject() }
-
-			const lines = data.trim().split(os.EOL)
-
-			if (lines.length === 1) { reject() }
-
-			let file = []
-
-			for (const i of lines) { file.push(i.split(",")) }
-
-			let edit = false
-
-			for (let i = 1; i < file.length; i++) {
-
-				if (file[i][0] === timestamp && file[i][15] === 'submitted') {
-
-					file[i][15] = "DENIED"
-
-					edit = true
-
-				}
-
+			if(result) {
+				resolve()
+			} else {
+				reject()
 			}
-
-			if (edit) {
-
-				let output = []
-
-				for (const i of file) { output.push(i.join(",")) }
-
-				fs.writeFile(path.join(__dirname, __filename), output.join(os.EOL), (err) => {
-
-					if (err) { reject() }
-
-					resolve()
-
-				})
-
-			} else { reject() }
-
-		})
+		} catch (error) {
+			console.log('Error changing request status to DENIED:', error)
+			reject()
+		}
 
 	}).then(() => {
 
@@ -750,7 +877,7 @@ app.put('/deny/:timestamp', auth, (req, res) => {
 
 	}, () => {
 
-		// fs.copyFileSync(path.join(__dirname, 'tmp.csv'), path.join(__dirname, __filename))
+		revertFile()
 
 		res.status(400).send(400)
 
@@ -763,54 +890,23 @@ app.put('/planned/:timestamp', auth, (req, res) => {
 
 	new Promise(async (resolve, reject) => {
 
-		// fs.copyFileSync(path.join(__dirname, __filename), path.join(__dirname, 'tmp.csv'))
+		backupFile()
 
 		let timestamp
-		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject() }
+		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject(); return; }
 
-		fs.readFile(path.join(__dirname, __filename), 'utf8', (err, data) => {
+		try {
+			const result = await changeRequestStatus(timestamp, PAYMENT_PLANNED)
 
-			if (err) { reject() }
-
-			const lines = data.trim().split(os.EOL)
-
-			if (lines.length === 1) { reject() }
-
-			let file = []
-
-			for (const i of lines) { file.push(i.split(",")) }
-
-			let edit = false
-
-			for (let i = 1; i < file.length; i++) {
-
-				if (file[i][0] === timestamp && file[i][15] === 'APPROVED') {
-
-					file[i][15] = "TRANSACTION_PLANNED"
-
-					edit = true
-
-				}
-
+			if(result) {
+				resolve()
+			} else {
+				reject()
 			}
-
-			if (edit) {
-
-				let output = []
-
-				for (const i of file) { output.push(i.join(",")) }
-
-				fs.writeFile(path.join(__dirname, __filename), output.join(os.EOL), (err) => {
-
-					if (err) { reject() }
-
-					resolve()
-
-				})
-
-			} else { reject() }
-
-		})
+		} catch (error) {
+			console.log('Error changing request status to PAYMENT_PLANNED:', error)
+			reject()
+		}
 
 	}).then(() => {
 
@@ -818,7 +914,7 @@ app.put('/planned/:timestamp', auth, (req, res) => {
 
 	}, () => {
 
-		// fs.copyFileSync(path.join(__dirname, 'tmp.csv'), path.join(__dirname, __filename))
+		revertFile()
 
 		res.status(400).send(400)
 
@@ -834,70 +930,47 @@ app.put('/paid/:timestamp', auth, (req, res) => {
 
 	new Promise(async (resolve, reject) => {
 
-		// fs.copyFileSync(path.join(__dirname, __filename), path.join(__dirname, 'tmp.csv'))
+		backupFile()
 
 		let timestamp
-		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject() }
+		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject(); return; }
 
-		fs.readFile(path.join(__dirname, __filename), 'utf8', (err, data) => {
+		try {
+			const amount = await changeRequestStatus(timestamp, PAID)
 
-			if (err) { reject() }
-
-			const lines = data.trim().split(os.EOL)
-
-			if (lines.length === 1) { reject() }
-
-			let file = []
-
-			for (const i of lines) { file.push(i.split(",")) }
-
-			let edit = false
-
-			for (let i = 1; i < file.length; i++) {
-
-				if (file[i][0] === timestamp) {
-
-					if (file[i][15] === 'APPROVED' || file[i][15] === 'TRANSACTION_PLANNED') {
-
-						file[i][15] = 'PAID'
-
-						edit = true
-
-					}
-
-				}
-
-			}
-
-			if (edit) {
-
-				let output = []
-
-				for (const i of file) { output.push(i.join(",")) }
-
-				fs.writeFile(path.join(__dirname, __filename), output.join(os.EOL), (err) => {
-
-					if (err) { reject() }
-
-					resolve()
-
-				})
-
+			if(amount) {
+				resolve({ amount: Number(amount), timestamp })
 			} else {
-
 				reject()
-
 			}
+		} catch (error) {
+			console.log('Error changing request status to PAID:', error)
+			reject()
+		}
 
-		})
+	}).then(async (data) => {
 
-	}).then(() => {
+		backupBudget()
 
-		res.status(200).send(200)
+		try {
+			const result = await changeBudgetTotal(-Number(data.amount), `${data.timestamp} ${PAID}`)
+			const running = await changeRunningTotal(-Number(data.amount), `${data.timestamp} ${PAID}`)
+
+			if(result && running) {
+				res.status(200).send(200)
+			} else {
+				revertBudget()
+				res.status(400).send(400)
+			}
+		} catch (error) {
+			console.log('Error updating budget total:', error)
+			revertBudget()
+			res.status(400).send(400)
+		}
 
 	}, () => {
 
-		// fs.copyFileSync(path.join(__dirname, 'tmp.csv'), path.join(__dirname, __filename))
+		revertFile()
 
 		res.status(400).send(400)
 
@@ -911,126 +984,48 @@ app.put('/paid/:timestamp', auth, (req, res) => {
 //timestamp param is mandatory
 app.put('/approve/:timestamp', auth, (req, res) => {
 
-	let amount
+	new Promise(async (resolve, reject) => {
 
-	new Promise((resolve, reject) => {
-
-		// fs.copyFileSync(`${__dirname}/${__filename}`, `${__dirname}/tmp.csv`)
+		backupFile()
 
 		let timestamp
-		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject() }
+		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject(); return; }
 
-		fs.readFile(`${__dirname}/${__filename}`, 'utf8', (err, data) => {
+		try {
+			const amount = await changeRequestStatus(timestamp, APPROVED)
 
-			if (err) { reject() } 
-
-			const lines = data.trim().split(os.EOL)
-
-			if (lines.length == 1) { reject() }
-
-			let file = []
-
-			for (const i of lines) { file.push(i.split(",")) }
-
-			let edit = false
-
-			for (let i = 1; i < file.length; i++) {
-
-				if (file[i][0] == timestamp && file[i][15] === 'submitted') {
-
-					file[i][15] = 'APPROVED'
-
-					edit = true
-
-					amount = file[i][3]
-
-				}
-
-			}
-
-			if (edit) {
-
-				let output = []
-
-				for (const i of file) { output.push(i.join(",")) }
-
-				fs.writeFile(`${__dirname}/${__filename}`, output.join(os.EOL), (err) => {
-
-					if (err) { reject() }
-
-					console.log(amount)
-
-					resolve(amount)
-
-				})
-
+			if (amount) {
+				resolve({ amount, timestamp })
 			} else {
-
 				reject()
-
 			}
+		} catch (error) {
+			console.log('Error changing request status to APPROVED:', error)
+			reject()
+		}
 
-		})
+	}).then(async (data) => {
 
-	}).then((amount) => {
+		backupBudget()
 
-		new Promise((resolve, reject) => {//try updating budget [ADD whatever was requested back to total]
-
-			let date_time = new Date()
-			const timestamp = date_time.toISOString()
-
-			let totalAmount = undefined
-			let changeAmount = undefined
-			let reason = 'APPROVED'
-
-			if (amount) { changeAmount = -Number(amount) } else { reject() }
-
-			fs.readFile(`${__dirname}/${__budgetFileName}`, 'utf8', (err, data) => {
-
-				if (err) { reject() }
-
-				const lines = data.trim().split(os.EOL)
-
-				if (lines.length == 1) {
-
-					totalAmount = changeAmount
-
-				} else {
-
-					totalAmount = String(Number(lines[lines.length - 1].split(",")[1]) + Number(changeAmount))
-
-				}
-
-				let input = [
-					timestamp,
-					totalAmount,
-					changeAmount,
-					reason
-				]
-
-				fs.appendFile(`${__dirname}/${__budgetFileName}`, input.join(",") + os.EOL, (err) => {
-
-					if (err) { reject() }
-
-					resolve()
-
-				})
-
-			})
-
-		}).then(() => {
-
-			res.status(200).send(200)
-
-		}, () => {//if budget update attempt fails
-
+		try {
+			const result = await changeRunningTotal(data.amount, `${data.timestamp} ${APPROVED}`)
+			
+			if (result) {
+				res.status(200).send(200)
+			} else {
+				revertBudget()
+				res.status(400).send(400)
+			}
+		} catch (error) {
+			console.log('Error updating running total:', error)
+			revertBudget()
 			res.status(400).send(400)
-
-		})
+		}
 
 	}, () => {
 
-		// fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)
+		revertFile()
 
 		res.status(400).send(400)
 
@@ -1043,58 +1038,43 @@ app.put('/approve/:timestamp', auth, (req, res) => {
 // /updateBudget/+5000?reason=donation
 // /updateBudget/-100000?reason=librarywidecoffeebreak
 //amount param is mandatory and reason query is optional ('update budget' by default)
-app.put('/updateBudget/:amount', auth, (req, res) => {
+app.put('/updateBudget/:amount', auth, async (req, res) => {
 
-	new Promise((resolve, reject) => {
+	backupBudget()
 
-		let date_time = new Date()
-		const timestamp = date_time.toISOString()
+	new Promise(async (resolve, reject) => {
 
-		let totalAmount = undefined
-		let changeAmount = undefined
-		let reason = 'update budget'
-
-		if (req.params.amount) { changeAmount = req.params.amount } else { reject() }
-		if (req.query.reason) { reason = req.query.reason }
-
-		fs.readFile(`${__dirname}/${__budgetFileName}`, 'utf8', (err, data) => {
-
-			if (err) { reject() }
-
-			const lines = data.trim().split(os.EOL)
-
-			if (lines.length == 1) {
-
-				totalAmount = changeAmount
-
-			} else {
-
-				totalAmount = String(Number(lines[lines.length - 1].split(",")[1]) + Number(changeAmount))
-
+		let amount
+		if (req.params.amount) { amount = req.params.amount } else { reject(); return; }
+		
+		try {
+		
+			const result = await changeBudgetTotal(Number(amount), `${new Date().toISOString()} Updated Budget`)
+			
+			if(result) { 
+				resolve() 
+			} else { 
+				reject() 
 			}
+		
+		} catch (error) {
 
-			let input = [
-				timestamp,
-				totalAmount,
-				changeAmount,
-				reason
-			]
-
-			fs.appendFile(`${__dirname}/${__budgetFileName}`, input.join(",") + os.EOL, (err) => {
-
-				if (err) { reject() }
-
-				resolve()
-
-			})
-
-		})
+			console.log('Error in changeBudgetTotal:', error)
+			reject()
+		
+		}
 
 	}).then(() => {
+
+		console.log('resolved request')
 
 		res.status(200).send(200)
 
 	}, () => {
+
+		console.log('rejected request')
+
+		revertBudget()
 
 		res.status(400).send(400)
 
@@ -1117,7 +1097,7 @@ app.post('/setBudget/:amount', auth, (req, res) => {
 
 		let totalAmount = undefined
 		let changeAmount = undefined
-		let reason = 'set budget'
+		let reason = timestamp + 'Set Budget'
 
 		if (req.params.amount) { totalAmount = req.params.amount } else { reject() }
 		if (req.query.reason) { reason = req.query.reason }
@@ -1176,7 +1156,7 @@ app.put('/update/:timestamp', auth, (req, res) => {
 
 	new Promise((resolve, reject) => {
 
-		// fs.copyFileSync(`${__dirname}/${__filename}`, `${__dirname}/tmp.csv`)
+		backupFile()
 
 		let timestamp = undefined
 
@@ -1197,43 +1177,41 @@ app.put('/update/:timestamp', auth, (req, res) => {
 
 			for (let i = 1; i < file.length; i++) {
 
-				// console.log(file[i])
-
 				if (file[i][0] === timestamp) {
 
 					edit = true
 
-					let email = undefined
-					let title = undefined
-					let amount = undefined
-					let author = undefined
-					let authorORCiD = undefined
-					let collab = undefined
-					let collabORCiD = undefined
-					let journal = undefined
-					let journalISSN = undefined
-					let publisher = undefined
-					let status = undefined
-					let type = undefined
-					let DOI = undefined
-					let comment = undefined
-					let OAstatus = undefined
+					let email
+					let title
+					let amount
+					let author
+					let authorORCiD
+					let collab
+					let collabORCiD
+					let journal
+					let journalISSN 
+					let publisher
+					let status
+					let type 
+					let DOI
+					let comment
+					let OAstatus
 
-					if (req.query.email) { email = req.query.email } else { email = file[i][1] }
-					if (req.query.title) { title = req.query.title } else { title = file[i][2] }
-					if (req.query.amount) { amount = req.query.amount } else { amount = file[i][3] }
-					if (req.query.author) { author = req.query.author } else { author = file[i][4] }
-					if (req.query.authorORCiD) { authorORCiD = req.query.authorORCiD } else { authorORCiD = file[i][5] }
-					if (req.query.collab) { collab = req.query.collab } else { collab = file[i][6] }
-					if (req.query.collabORCiD) { collabORCiD = req.query.collabORCiD } else { collabORCiD = file[i][7] }
-					if (req.query.journal) { journal = req.query.journal } else { journal = file[i][8] }
-					if (req.query.journalISSN) { journalISSN = req.query.journalISSN } else { journalISSN = file[i][9] }
-					if (req.query.publisher) { publisher = req.query.publisher } else { publisher = file[i][10] }
-					if (req.query.status) { status = req.query.status } else { status = file[i][11] }
-					if (req.query.type) { type = req.query.type } else { type = file[i][12] }
-					if (req.query.DOI) { DOI = req.query.DOI } else { DOI = file[i][13] }
-					if (req.query.comment) { comment = req.query.comment } else { comment = file[i][14] }
-					if (req.query.OAstatus) { OAstatus = req.query.OAstatus } else { OAstatus = file[i][15] }
+					if (req.query.email) { email = req.query.email.replace(",", ".") } else { email = file[i][1] }
+					if (req.query.title) { title = req.query.title.replace(",", ".") } else { title = file[i][2] }
+					if (req.query.amount) { amount = req.query.amount.replace(",", ".") } else { amount = file[i][3] }
+					if (req.query.author) { author = req.query.author.replace(",", ".") } else { author = file[i][4] }
+					if (req.query.authorORCiD) { authorORCiD = req.query.authorORCiD.replace(",", ".") } else { authorORCiD = file[i][5] }
+					if (req.query.collab) { collab = req.query.collab.replace(",", ".") } else { collab = file[i][6] }
+					if (req.query.collabORCiD) { collabORCiD = req.query.collabORCiD.replace(",", ".") } else { collabORCiD = file[i][7] }
+					if (req.query.journal) { journal = req.query.journal.replace(",", ".") } else { journal = file[i][8] }
+					if (req.query.journalISSN) { journalISSN = req.query.journalISSN.replace(",", ".") } else { journalISSN = file[i][9] }
+					if (req.query.publisher) { publisher = req.query.publisher.replace(",", ".") } else { publisher = file[i][10] }
+					if (req.query.status) { status = req.query.status.replace(",", ".") } else { status = file[i][11] }
+					if (req.query.type) { type = req.query.type.replace(",", ".") } else { type = file[i][12] }
+					if (req.query.DOI) { DOI = req.query.DOI.replace(",", ".") } else { DOI = file[i][13] }
+					if (req.query.comment) { comment = req.query.comment.replace(",", ".") } else { comment = file[i][14] }
+					if (req.query.OAstatus) { OAstatus = req.query.OAstatus.replace(",", ".") } else { OAstatus = file[i][15] }
 
 					file[i] = [
 						timestamp,
@@ -1290,7 +1268,7 @@ app.put('/update/:timestamp', auth, (req, res) => {
 
 	}, () => {	//ON REJECT
 
-		// fs.copyFileSync(`${__dirname}/tmp.csv`, `${__dirname}/${__filename}`)
+		revertFile()
 
 		// console.log(err)
 
@@ -1323,25 +1301,22 @@ app.post('/create', (req, res) => {
 
 	new Promise((resolve, reject) => {
 
-		let date_time = new Date()
-		const timestamp = date_time.toISOString()
+		let email			//author email
+		let title			//title of article
+		let amount			//amount requested from the fund
+		let author			//name of the author
+		let authorORCiD		//ORCiD of the author
+		let collab			//name of the collaborating author(s) //THIS COULD BE A LIST OF PEOPLE
+		let collabORCiD		//ORCiD of the collaborating author(s) //OPTIONAL
+		let journal			//name of the journal the article was submitted to
+		let journalISSN		//ISSN of the journal
+		let publisher		//name of the publisher
+		let status			//????
+		let type			//publication type (research article, cover image, open access book, article commentary, review article, rapid communication, or OTHERS)
+		let DOI				//DOI //OPTIONAL
+		let comment			//comment to the library publishing team
 
-		let email = undefined			//author email
-		let title = undefined			//title of article
-		let amount = undefined			//amount requested from the fund
-		let author = undefined			//name of the author
-		let authorORCiD = undefined		//ORCiD of the author
-		let collab = undefined			//name of the collaborating author(s) //THIS COULD BE A LIST OF PEOPLE
-		let collabORCiD = undefined		//ORCiD of the collaborating author(s) //OPTIONAL
-		let journal = undefined			//name of the journal the article was submitted to
-		let journalISSN = undefined		//ISSN of the journal
-		let publisher = undefined		//name of the publisher
-		let status = undefined			//????
-		let type = undefined			//publication type (research article, cover image, open access book, article commentary, review article, rapid communication, or OTHERS)
-		let DOI = undefined				//DOI //OPTIONAL
-		let comment = undefined			//comment to the library publishing team
-
-		let OAstatus = "submitted"
+		let OAstatus = SUBMITTED
 
 		if (req.query.email) { email = req.query.email.replace(",", ".") }
 		if (req.query.title) { title = req.query.title.replace(",", ".") }
@@ -1359,7 +1334,7 @@ app.post('/create', (req, res) => {
 		if (req.query.comment) { comment = req.query.comment.replace(",", ".") }
 
 		const input = [
-			timestamp,
+			new Date().toISOString(),
 			email,
 			title,
 			amount,
@@ -1377,18 +1352,13 @@ app.post('/create', (req, res) => {
 			OAstatus
 		]
 
-		fs.appendFile(
-			`${__dirname}/${__filename}`,
-			input.join(",") + os.EOL,
-			"utf8",
-			(err) => {
+		fs.appendFile(path.join(__dirname,__filename), input.join(",") + os.EOL, "utf8", (err) => {
 
 				if (err) { reject(err) }
 
-				resolve()
+				else { resolve() }
 
-			}
-		)
+		})
 
 	}).then(() => {
 
@@ -1397,6 +1367,47 @@ app.post('/create', (req, res) => {
 	}, () => {
 
 		res.status(400).send(400)
+
+	})
+
+})
+
+//Fetching all uploaded URLs by users
+//[GET] /urls
+//returns all URLs with email in json format
+//check 'urls.csv'
+app.get('/urls', auth, (req, res) => {
+	
+	ensureCSV(path.join(__dirname, __urlsFileName))
+
+	new Promise((resolve, reject) => {
+
+		fs.readFile(path.join(__dirname, __urlsFileName), 'utf8', (err, data) => {
+
+			if (err) { reject(err) }
+
+			parse(data, {
+
+				columns: true,
+				skip_empty_lines: true
+
+			}, (err, records) => {
+
+				if (err) { reject(err) }
+
+				resolve(records)
+
+			})
+
+		})
+
+	}).then(parsed => {
+
+		res.status(200).json({ urls: parsed })
+
+	}, rejected => {
+
+		res.status(400).send(JSON.stringify(rejected))
 
 	})
 
@@ -1478,49 +1489,8 @@ app.get('/fetchBudget', auth, (req, res) => {
 
 })
 
-//TESTING PURPOSE ONLY
-//Updating CSV
-/*
-app.get('/test', (req, res) => {
-
-	new Promise((resolve, reject) => {
-
-		let date_time = new Date()
-		const timestamp = date_time.toISOString()
-
-		fs.appendFile(
-			`${__dirname}/empty.csv`,
-			[
-				timestamp,
-				"1", "2", "3", "4", "5",
-				"6", "7", "8", "9", "10",
-				"11", "12", "13", "14", "15"
-			].join(",") + os.EOL,
-			"utf8",
-			(err) => {
-
-				if (err) { reject(err) }
-
-				resolve()
-
-			}
-		)
-
-	}).then(() => {
-
-		res.status(200).send('asdf')
-
-	}, () => {
-
-		res.status(400).send('err')
-
-	})
-
-})
-*/
-
 app.listen(port, () => {
 
-	console.log(`server is listening at http://localhost:${port}`)
+	console.log(`server is listening at ${port}`)
 
 })

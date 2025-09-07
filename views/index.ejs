@@ -3,35 +3,240 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title><%= typeof pageTitle !== 'undefined' ? pageTitle : 'Open Access Fund Request' %></title>
+  <title><%= typeof pageTitle !== 'undefined' ? pageTitle : 'Brandeis University Open Access Fund Request' %></title>
+  <link rel="icon" type="image/png" href="/public/brandeis.png">
+  <link rel="shortcut icon" type="image/png" href="/public/brandeis.png">
   <style>
-    :root { --radius: 16px; --gap: 12px; }
+    :root { 
+      --radius: 16px; 
+      --gap: 12px; 
+      --brandeis-blue: #123374;
+      --brandeis-light-blue: #4a90e2;
+      --brandeis-gray: #666;
+      --brandeis-light-gray: #f8f9fa;
+    }
     * { box-sizing: border-box; }
     html, body { height: 100%; }
     body {
       margin: 0;
-      background: #fff; /* white background */
-      color: #111;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      line-height: 1.45;
-    }
-    .wrapper {
+      background: #fff;
+      color: #333;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
       min-height: 100vh;
-      display: grid;
-      place-items: center; /* centers the form */
-      padding: 24px;
+    }
+
+    /* Brandeis Header */
+    .brandeis-header {
+      background: var(--brandeis-blue);
+      color: white;
+      padding: 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header-top {
+      background: #0f2a5f;
+      padding: 8px 0;
+      font-size: 0.85rem;
+    }
+    .header-top .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      text-align: right;
+    }
+    .header-top a {
+      color: #ccc;
+      text-decoration: none;
+      margin-left: 20px;
+    }
+    .header-top a:hover {
+      color: white;
+    }
+    .header-main {
+      padding: 15px 0;
+    }
+    .header-main .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brandeis-logo {
+      display: flex;
+      align-items: center;
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: white;
+      text-decoration: none;
+    }
+    /* .brandeis-logo::before {
+      content: "";
+      margin-right: 10px;
+      font-size: 1.6rem;
+    } */
+    .header-nav ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      gap: 30px;
+    }
+    .header-nav a {
+      color: white;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .header-nav a:hover {
+      color: #ccc;
+    }
+
+    /* Breadcrumb */
+    .breadcrumb {
+      background: var(--brandeis-light-gray);
+      padding: 12px 0;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .breadcrumb .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .breadcrumb-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    .breadcrumb-nav {
+      font-size: 0.9rem;
+      color: var(--brandeis-gray);
+    }
+    .breadcrumb-nav a {
+      color: var(--brandeis-blue);
+      text-decoration: none;
+    }
+    .breadcrumb-nav a:hover {
+      text-decoration: underline;
+    }
+    .page-nav-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .page-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      background: white;
+      color: var(--brandeis-blue);
+      text-decoration: none;
+      border-radius: 6px;
+      border: 1px solid #dee2e6;
+      font-weight: 500;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    .page-nav-btn:hover {
+      background: var(--brandeis-blue);
+      color: white;
+      border-color: var(--brandeis-blue);
+    }
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
     }
     .card {
       width: min(820px, 100%);
       background: #fff;
-      border: 1px solid #eee;
+      border: 1px solid #ddd;
       border-radius: var(--radius);
-      box-shadow: 0 1px 6px rgba(0,0,0,.06);
-      padding: 28px;
-      text-align: center; /* center headings and helper text */
+      box-shadow: 0 4px 12px rgba(0,0,0,.08);
+      padding: 40px;
+      text-align: center;
     }
-    h1 { margin: 0 0 8px; font-size: 1.5rem; }
-    .note { margin: 0 0 20px; color: #555; font-size: .95rem; }
+    .card h1 { 
+      margin: 0 0 8px; 
+      font-size: 2rem; 
+      color: var(--brandeis-blue);
+      font-weight: 300;
+    }
+    .card .subtitle {
+      margin: 0 0 30px;
+      color: var(--brandeis-gray);
+      font-size: 1.1rem;
+      font-weight: 300;
+    }
+    .note { 
+      margin: 0 0 25px; 
+      color: #666; 
+      font-size: .95rem; 
+      padding: 15px;
+      background: #f8f9fa;
+      border-left: 4px solid var(--brandeis-light-blue);
+      border-radius: 4px;
+      text-align: left;
+    }
+
+    /* Footer */
+    .brandeis-footer {
+      background: var(--brandeis-blue);
+      color: white;
+      padding: 40px 0 20px;
+      margin-top: auto;
+    }
+    .footer-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .footer-main {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 40px;
+      margin-bottom: 30px;
+    }
+    .footer-section h3 {
+      margin: 0 0 15px;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .footer-section ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .footer-section ul li {
+      margin-bottom: 8px;
+    }
+    .footer-section a {
+      color: #ccc;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-section a:hover {
+      color: white;
+    }
+    .footer-bottom {
+      border-top: 1px solid #2a4a7f;
+      padding-top: 20px;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+    .footer-bottom p {
+      margin: 5px 0;
+    }
 
     .grid {
       display: grid;
@@ -41,110 +246,311 @@
     }
     label { display: grid; gap: 6px; font-weight: 600; }
 
-    input, textarea {
+    input, textarea, select {
       width: 100%;
       padding: 10px 12px;
       border: 1px solid #ddd;
       border-radius: 12px;
       font: inherit;
       background: #fff;
+      transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--brandeis-blue);
+      box-shadow: 0 0 0 2px rgba(18, 51, 116, 0.1);
+    }
+    input.error, textarea.error, select.error {
+      border-color: #dc3545;
+      box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.1);
+    }
+
+    .required-note, .optional-note {
+      font-size: 0.8rem;
+      font-weight: 400;
+      color: var(--brandeis-gray);
+      font-style: italic;
+    }
+    .required-note {
+      color: #dc3545;
+    }
+
+    .error-message {
+      display: block;
+      color: #dc3545;
+      font-size: 0.85rem;
+      margin-top: 4px;
+      min-height: 1.2em;
+      font-weight: 500;
     }
 
     .submit {
-      margin-top: 14px;
+      margin-top: 20px;
       width: 100%;
-      padding: 12px 16px;
+      padding: 14px 24px;
       border: 0;
-      border-radius: 999px;
-      background: #111;
+      border-radius: 8px;
+      background: var(--brandeis-blue);
       color: #fff;
-      font-weight: 700;
+      font-weight: 600;
+      font-size: 1.1rem;
       cursor: pointer;
+      transition: background-color 0.2s;
     }
-    .submit:hover { opacity: .9; }
+    .submit:hover { 
+      background: var(--brandeis-light-blue);
+    }
+    .submit:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    .submit:disabled:hover {
+      background: #ccc;
+    }
 
-    #status { display:block; margin-top: 10px; font-size: .95rem; color: #333; }
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .header-main .container {
+        flex-direction: column;
+        gap: 15px;
+      }
+      .header-nav ul {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 15px;
+      }
+      .card {
+        padding: 30px 20px;
+      }
+      .footer-main {
+        grid-template-columns: 1fr;
+        gap: 25px;
+      }
+    }
+
+    #status { 
+      display: block; 
+      margin-top: 15px; 
+      font-size: 1rem; 
+      color: #333; 
+      font-weight: 500;
+      text-align: center;
+      padding: 10px;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+    #status:not(:empty) {
+      background-color: #f8f9fa;
+      border: 1px solid #dee2e6;
+    }
+
   </style>
 </head>
 <body>
-  <div class="wrapper">
+  <!-- Brandeis Header -->
+  <header class="brandeis-header">
+    <!-- <div class="header-top">
+      <div class="container">
+        <a href="https://www.brandeis.edu/directory/">Directory</a>
+        <a href="https://www.brandeis.edu/emergency/">Emergency</a>
+        <a href="https://www.brandeis.edu/contact/">Contact</a>
+      </div>
+    </div> -->
+    <div class="header-main">
+      <div class="container">
+        <a href="https://www.brandeis.edu" class="brandeis-logo">Brandeis University</a>
+        <nav class="header-nav">
+          <ul>
+            <li><a href="https://www.brandeis.edu/library/">Library</a></li>
+            <li><a href="https://www.brandeis.edu/academics/">Academics</a></li>
+            <li><a href="https://www.brandeis.edu/research/">Research</a></li>
+            <li><a href="https://www.brandeis.edu/admissions/">Admissions</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb">
+    <div class="container">
+      <div class="breadcrumb-content">
+        <div class="breadcrumb-nav">
+          <a href="https://www.brandeis.edu">Home</a> > 
+          <a href="https://www.brandeis.edu/library/">Library</a> > 
+          <span>Open Access Fund Request</span>
+        </div>
+        <div class="page-nav-buttons">
+          <a href="/upload" class="page-nav-btn">Upload Documents</a>
+          <a href="/login" class="page-nav-btn">Admin Login</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
     <form id="recordForm" class="card" aria-describedby="formNote">
-      <h1>Record Submission</h1>
-      <p id="formNote" class="note">Please fill in the fields below and press Submit.</p>
+      <h1>Open Access Fund Request</h1>
+      <!-- <p class="subtitle">Brandeis University Library</p> -->
+      <p id="formNote" class="note">
+        <strong>About the Open Access Fund:</strong> The Brandeis University Library provides funding to support open access publication of scholarly articles by Brandeis faculty and students. Please complete all required fields below to submit your request.
+      </p>
 
       <div class="grid">
-        <label>Email [Brandeis.edu only]
-          <input type="email" name="Email" placeholder="you@brandeis.edu" />
+        <label>Email * <span class="required-note">[Must end with @brandeis.edu]</span>
+          <input type="email" name="Email" placeholder="you@brandeis.edu" required />
+          <span class="error-message" id="email-error"></span>
         </label>
 
-        <label>Title
-          <input type="text" name="Title" placeholder="Title of the article" />
+        <label>Title *
+          <input type="text" name="Title" placeholder="Title of the article" required />
+          <span class="error-message" id="title-error"></span>
         </label>
 
-        <label>Amount
-          <input type="number" name="Amount" step="any" min="0" placeholder="000" />
+        <label>Amount *
+          <input type="number" name="Amount" step="any" min="0" placeholder="0.00" required />
+          <span class="error-message" id="amount-error"></span>
         </label>
 
-        <label>Author
-          <input type="text" name="Author" placeholder="Primary author" />
+        <label>Author *
+          <input type="text" name="Author" placeholder="Primary author" required />
+          <span class="error-message" id="author-error"></span>
         </label>
 
-        <label>Author ORCiD
-          <input type="text" name="Author ORCiD" pattern="(\d{4}-){3}\d{3}[\dX]" placeholder="0000-0000-0000-0000" />
+        <label>Author ORCiD * <span class="required-note">[Format: 0000-0000-0000-0000]</span>
+          <input type="text" name="Author ORCiD" pattern="^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$" placeholder="0000-0000-0000-0000" required />
+          <span class="error-message" id="author-orcid-error"></span>
         </label>
 
-        <label>Collaborator(s)
-          <input type="text" name="Collab" placeholder="Collaborator(s)" />
+        <label>Collaborator(s) <span class="optional-note">[Optional - separate multiple with semicolons]</span>
+          <input type="text" name="Collab" placeholder="Collaborator 1; Collaborator 2; etc." />
+          <span class="error-message" id="collab-error"></span>
         </label>
 
-        <label>Collaborator(s) ORCiD(s)
-          <input type="text" name="Collab ORCiD" placeholder="0000-0000-0000-0000" />
+        <label>Collaborator(s) ORCiD(s) <span class="optional-note">[Optional - separate multiple with semicolons]</span>
+          <input type="text" name="Collab ORCiD" placeholder="0000-0000-0000-0000; 0000-0000-0000-0001; etc." />
+          <span class="error-message" id="collab-orcid-error"></span>
         </label>
 
-        <label>Journal
-          <input type="text" name="Journal" placeholder="Journal name" />
+        <label>Journal *
+          <input type="text" name="Journal" placeholder="Journal name" required />
+          <span class="error-message" id="journal-error"></span>
         </label>
 
-        <label>Journal ISSN
-          <input type="text" name="Journal ISSN" pattern="^\d{4}-\d{3}[\dxX]$" placeholder="1234-567X" />
+        <label>Journal ISSN * <span class="required-note">[Format: 1234-567X]</span>
+          <input type="text" name="Journal ISSN" pattern="^\d{4}-\d{3}[\dxX]$" placeholder="1234-567X" required />
+          <span class="error-message" id="journal-issn-error"></span>
         </label>
 
-        <label>Publisher
-          <input type="text" name="Publisher" placeholder="Publisher name" />
+        <label>Publisher *
+          <input type="text" name="Publisher" placeholder="Publisher name" required />
+          <span class="error-message" id="publisher-error"></span>
         </label>
 
-        <label>Status
-          <input type="text" name="Status" placeholder="e.g., submitted, accepted" />
+        <label>Status *
+          <select name="Status" required>
+            <option value="">Select status...</option>
+            <option value="submitted">Submitted</option>
+            <option value="accepted">Accepted</option>
+            <option value="published">Published</option>
+            <option value="in-press">In Press</option>
+            <option value="under-review">Under Review</option>
+            <option value="other">Other</option>
+          </select>
+          <span class="error-message" id="status-error"></span>
         </label>
 
-        <label>Type
-          <input type="text" name="Type" placeholder="e.g., article, review" />
+        <label>Type *
+          <select name="Type" required>
+            <option value="">Select type...</option>
+            <option value="article">Article</option>
+            <option value="review">Review</option>
+            <option value="book-chapter">Book Chapter</option>
+            <option value="conference-paper">Conference Paper</option>
+            <option value="other">Other</option>
+          </select>
+          <span class="error-message" id="type-error"></span>
         </label>
 
-        <label>DOI
-          <input type="text" name="DOI" placeholder="10.xxxx/xxxxx" />
+        <label>DOI * <span class="required-note">[Format: 10.xxxx/xxxxx]</span>
+          <input type="text" name="DOI" pattern="^10\.\d{4,}\/.*$" placeholder="10.1234/example.doi" required />
+          <span class="error-message" id="doi-error"></span>
         </label>
 
-        <label>Comment for the library publishing team
-          <textarea name="Comment" rows="3" placeholder="Any notes or context"></textarea>
+        <label>Comment for the library publishing team <span class="optional-note">[Optional]</span>
+          <textarea name="Comment" rows="3" placeholder="Any notes or context for the library publishing team"></textarea>
         </label>
       </div>
 
-      <button type="submit" class="submit">Submit</button>
+      <button type="submit" class="submit">Submit Request</button>
       <output id="status" role="status" aria-live="polite"></output>
     </form>
-  </div>
+
+  </main>
+
+  <!-- Brandeis Footer -->
+  <footer class="brandeis-footer">
+    <div class="footer-content">
+      <div class="footer-main">
+        <div class="footer-section">
+          <h3>Brandeis University</h3>
+          <ul>
+            <li><a href="https://www.brandeis.edu/about/">About Brandeis</a></li>
+            <li><a href="https://www.brandeis.edu/academics/">Academics</a></li>
+            <li><a href="https://www.brandeis.edu/admissions/">Admissions</a></li>
+            <!-- <li><a href="https://www.brandeis.edu/campus-life/">Campus Life</a></li> -->
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h3>Library Services</h3>
+          <ul>
+            <li><a href="https://www.brandeis.edu/library/">Library Home</a></li>
+            <li><a href="https://www.brandeis.edu/library/research/">Research Support</a></li>
+            <li><a href="https://www.brandeis.edu/library/services/">Services</a></li>
+            <li><a href="https://www.brandeis.edu/library/about/">About the Library</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h3>Resources</h3>
+          <ul>
+            <li><a href="https://search.library.brandeis.edu/">One Search</a></li>
+            <li><a href="https://guides.library.brandeis.edu/">Research Guides</a></li>
+            <li><a href="https://guides.library.brandeis.edu/az/databases">Databases A-Z</a></li>
+            <li><a href="https://search.library.brandeis.edu/">Journals A-Z</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h3>Contact Information</h3>
+          <ul>
+            <li>Goldfarb Library</li>
+            <li>415 South Street</li>
+            <li>Waltham, MA 02453</li>
+            <li><a href="mailto:library@brandeis.edu">librarypublishing@brandeis.edu</a></li>
+            <!-- <li><a href="tel:781-736-4636">(781) 736-4636</a></li> -->
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; <%= new Date().getFullYear() %> Brandeis University. All rights reserved.
+          <a href="https://www.brandeis.edu/about/privacy.html">Privacy Policy</a> | 
+          <a href="https://www.brandeis.edu/about/accessibility-statement.html">Accessibility</a>
+        </p>
+      </div>
+    </div>
+  </footer>
 
   <script>
     (function () {
       const form = document.getElementById('recordForm');
       // Base URL for the GET request. Override by passing { actionUrl: 'https://host/create' } to the EJS template
-      // const baseUrl = "<%= typeof actionUrl !== 'undefined' ? actionUrl : 'https://localhost:3000/create' %>";
+      const baseUrl = "<%= typeof actionUrl !== 'undefined' ? actionUrl : 'http://localhost:3000/create' %>";
       // const successUrl = "<%= typeof successUrl !== 'undefined' ? successUrl : 'https://localhost:3000/success' %>";
       // const failUrl = "<%= typeof failUrl !== 'undefined' ? failUrl : 'https://localhost:3000/fail' %>";
-      const baseUrl = "<%= typeof actionUrl !== 'undefined' ? actionUrl : 'https://oafund.library.brandeis.edu/create' %>";
-      const successUrl = "<%= typeof successUrl !== 'undefined' ? successUrl : 'https://oafund.library.brandeis.edu/success' %>";
-      const failUrl = "<%= typeof failUrl !== 'undefined' ? failUrl : 'https://oafund.library.brandeis.edu/fail' %>";
+      // const baseUrl = "<%= typeof actionUrl !== 'undefined' ? actionUrl : 'https://oafund.library.brandeis.edu/create' %>";
+      // const successUrl = "<%= typeof successUrl !== 'undefined' ? successUrl : 'https://oafund.library.brandeis.edu/success' %>";
+      // const failUrl = "<%= typeof failUrl !== 'undefined' ? failUrl : 'https://oafund.library.brandeis.edu/fail' %>";
       
 
       // Map verbose form field names to clean query parameter keys
@@ -165,8 +571,177 @@
         'Comment': 'comment'
       };
 
+      // Validation functions
+      function clearErrors() {
+        document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+        document.querySelectorAll('input, select, textarea').forEach(el => el.classList.remove('error'));
+      }
+
+      function showError(fieldName, message) {
+        const errorEl = document.getElementById(fieldName + '-error');
+        const inputEl = document.querySelector(`[name="${fieldName}"]`);
+        if (errorEl) errorEl.textContent = message;
+        if (inputEl) inputEl.classList.add('error');
+      }
+
+      function validateForm() {
+        clearErrors();
+        let isValid = true;
+
+        const formData = new FormData(form);
+        const data = {};
+        for (const [name, value] of formData.entries()) {
+          data[name] = (typeof value === 'string') ? value.trim() : value;
+        }
+
+        // Email validation (required, must end with @brandeis.edu)
+        if (!data.Email) {
+          showError('Email', 'Email is required');
+          isValid = false;
+        } else if (!data.Email.endsWith('@brandeis.edu')) {
+          showError('Email', 'Email must end with @brandeis.edu');
+          isValid = false;
+        }
+
+        // Title validation
+        if (!data.Title) {
+          showError('Title', 'Title is required');
+          isValid = false;
+        }
+
+        // Amount validation
+        if (!data.Amount) {
+          showError('Amount', 'Amount is required');
+          isValid = false;
+        } else if (isNaN(data.Amount) || parseFloat(data.Amount) < 0) {
+          showError('Amount', 'Amount must be a valid positive number');
+          isValid = false;
+        }
+
+        // Author validation
+        if (!data.Author) {
+          showError('Author', 'Author is required');
+          isValid = false;
+        }
+
+        // Author ORCiD validation
+        const orcidPattern = /^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/;
+        if (!data['Author ORCiD']) {
+          showError('author-orcid', 'Author ORCiD is required');
+          isValid = false;
+        } else if (!orcidPattern.test(data['Author ORCiD'])) {
+          showError('author-orcid', 'ORCiD must be in format: 0000-0000-0000-0000');
+          isValid = false;
+        }
+
+        // Collaborator ORCiD validation (if collaborator ORCiDs provided)
+        if (data['Collab ORCiD']) {
+          const collabOrcids = data['Collab ORCiD'].split(';').map(s => s.trim()).filter(s => s);
+          for (const orcid of collabOrcids) {
+            if (!orcidPattern.test(orcid)) {
+              showError('collab-orcid', 'All ORCiDs must be in format: 0000-0000-0000-0000');
+              isValid = false;
+              break;
+            }
+          }
+        }
+
+        // Journal validation
+        if (!data.Journal) {
+          showError('Journal', 'Journal name is required');
+          isValid = false;
+        }
+
+        // Journal ISSN validation
+        const issnPattern = /^\d{4}-\d{3}[\dxX]$/;
+        if (!data['Journal ISSN']) {
+          showError('journal-issn', 'Journal ISSN is required');
+          isValid = false;
+        } else if (!issnPattern.test(data['Journal ISSN'])) {
+          showError('journal-issn', 'ISSN must be in format: 1234-567X');
+          isValid = false;
+        }
+
+        // Publisher validation
+        if (!data.Publisher) {
+          showError('Publisher', 'Publisher name is required');
+          isValid = false;
+        }
+
+        // Status validation
+        if (!data.Status) {
+          showError('Status', 'Status is required');
+          isValid = false;
+        }
+
+        // Type validation
+        if (!data.Type) {
+          showError('Type', 'Type is required');
+          isValid = false;
+        }
+
+        // DOI validation
+        const doiPattern = /^10\.\d{4,}\/.*$/;
+        if (!data.DOI) {
+          showError('DOI', 'DOI is required');
+          isValid = false;
+        } else if (!doiPattern.test(data.DOI)) {
+          showError('DOI', 'DOI must start with 10. followed by publisher code and identifier');
+          isValid = false;
+        }
+
+        return isValid;
+      }
+
+      // Add real-time validation on blur
+      document.querySelectorAll('input[required], select[required]').forEach(field => {
+        field.addEventListener('blur', () => {
+          const fieldName = field.name;
+          const value = field.value.trim();
+          
+          // Clear previous error for this field
+          const errorEl = document.getElementById(fieldName.toLowerCase().replace(/\s+/g, '-') + '-error');
+          if (errorEl) errorEl.textContent = '';
+          field.classList.remove('error');
+          
+          // Validate specific field
+          if (fieldName === 'Email' && value) {
+            if (!value.endsWith('@brandeis.edu')) {
+              showError('email', 'Email must end with @brandeis.edu');
+            }
+          } else if (fieldName === 'Author ORCiD' && value) {
+            const orcidPattern = /^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/;
+            if (!orcidPattern.test(value)) {
+              showError('author-orcid', 'ORCiD must be in format: 0000-0000-0000-0000');
+            }
+          } else if (fieldName === 'Journal ISSN' && value) {
+            const issnPattern = /^\d{4}-\d{3}[\dxX]$/;
+            if (!issnPattern.test(value)) {
+              showError('journal-issn', 'ISSN must be in format: 1234-567X');
+            }
+          } else if (fieldName === 'DOI' && value) {
+            const doiPattern = /^10\.\d{4,}\/.*$/;
+            if (!doiPattern.test(value)) {
+              showError('doi', 'DOI must start with 10. followed by publisher code and identifier');
+            }
+          } else if (fieldName === 'Amount' && value) {
+            if (isNaN(value) || parseFloat(value) < 0) {
+              showError('amount', 'Amount must be a valid positive number');
+            }
+          }
+        });
+      });
+
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // Validate form before submission
+        if (!validateForm()) {
+          document.getElementById('status').textContent = 'Please correct the errors above and try again.';
+          document.getElementById('status').style.color = '#dc3545';
+          return;
+        }
+
         const fd = new FormData(form);
         const params = new URLSearchParams();
         for (const [name, value] of fd.entries()) {
@@ -177,19 +752,40 @@
         const url = params.toString() ? `${baseUrl}?${params}` : baseUrl;
 
         try {
+            // Show loading state
+            const statusEl = document.getElementById('status');
+            const submitBtn = form.querySelector('button[type="submit"]');
+            
+            statusEl.textContent = 'Submitting request...';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
 
             const res = await fetch(url, {method : "POST"});
 
             if (res.status === 200) { 
-                window.location.href = successUrl
+                // Show success popup
+                alert('Success.\n\nYour Open Access Fund request has been submitted successfully. You will receive a confirmation email shortly.');
+                
+                // Reset form
+                form.reset();
+                statusEl.textContent = 'Request submitted successfully!';
+                statusEl.style.color = '#28a745';
             } else {
-                throw new Error('HTTP' + res.status)
+                throw new Error('HTTP ' + res.status)
             }
  
         } catch (err) {
-
-            window.location.href = failUrl
-
+            // Show error popup
+            alert('Submission Failed.\n\nThere was an error submitting your request. Please try again or contact the library for assistance.\n\nError: ' + err.message);
+            
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = 'Submission failed. Please try again.';
+            statusEl.style.color = '#dc3545';
+        } finally {
+            // Reset button state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit Request';
         }
         
       });

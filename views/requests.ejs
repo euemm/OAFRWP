@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title><%= typeof pageTitle !== 'undefined' ? pageTitle : 'OA Requests' %></title>
+  <link rel="icon" type="image/png" href="/public/brandeis.png">
+  <link rel="shortcut icon" type="image/png" href="/public/brandeis.png">
   <style>
     :root { --radius: 16px; --gap: 12px; }
     * { box-sizing: border-box; }
@@ -21,7 +23,9 @@
     .budget-amount { font-size: 1.9rem; font-weight: 800; letter-spacing:.3px; }
 
     /* --- LAYOUT --- */
-    .wrapper { min-height: calc(100vh - 180px); display: grid; padding: 24px; }
+    .wrapper { min-height: calc(100vh - 180px); display: flex; flex-direction: column; padding: 24px; }
+    .fixed-sections { flex-shrink: 0; }
+    .scrollable-section { flex: 1; overflow: hidden; }
     .card { background: #fff; border: 1px solid #eee; border-radius: var(--radius); box-shadow: 0 1px 6px rgba(0,0,0,.06); padding: 20px; }
 
     header.section-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
@@ -31,17 +35,95 @@
     button.ghost { background:#fff; color:#111; }
 
     .status { font-weight:700; padding:4px 8px; border-radius:999px; border:1px solid #eee; }
-    .table-wrap { overflow:auto; border:1px solid #eee; border-radius:12px; }
-    table { width:100%; border-collapse:separate; border-spacing:0; min-width:900px; }
-    thead th { position:sticky; top:0; background:#fafafa; border-bottom:1px solid #eee; text-align:left; padding:10px; font-size:.9rem; }
-    tbody td { border-bottom:1px solid #f1f1f1; padding:10px; vertical-align:top; font-size:.95rem; }
+    .table-wrap { 
+      border:1px solid #eee; 
+      border-radius:12px; 
+      transform: rotateX(180deg);
+    }
+    
+    .table-wrap table {
+      transform: rotateX(180deg);
+    }
+    table { width:100%; border-collapse:separate; border-spacing:0; min-width:1400px; }
+    thead th { position:sticky; top:0; background:#fafafa; border-bottom:1px solid #eee; text-align:left; padding:12px; font-size:.9rem; min-width: 120px; }
+    tbody td { border-bottom:1px solid #f1f1f1; padding:12px; vertical-align:top; font-size:.95rem; min-width: 120px; }
+    
+    /* Text wrapping for long content */
+    .text-wrap { 
+      word-wrap: break-word; 
+      word-break: break-word; 
+      max-width: 200px; 
+      white-space: normal;
+    }
+    .text-truncate {
+      max-width: 150px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    /* Column toggle controls */
+    .column-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .column-toggle {
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .column-toggle:hover {
+      background: #e9ecef;
+    }
+    .column-toggle.active {
+      background: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+    .columns-info {
+      font-size: 0.85rem;
+      color: #6c757d;
+      margin-left: auto;
+    }
     tbody tr:hover { background:#fcfcfc; }
     .nowrap { white-space:nowrap; }
     .small { font-size:.85rem; color:#444; }
     .actions-cell { min-width: 280px; }
+    
+    /* Specific column widths for better readability */
+    .col-timestamp { min-width: 110px; }
+    .col-email { min-width: 110px; }
+    .col-title { min-width: 250px; }
+    .col-amount { min-width: 140px; }
+    .col-author { min-width: 180px; }
+    .col-orcid { min-width: 150px; }
+    .col-journal { min-width: 200px; }
+    .col-issn { min-width: 120px; }
+    .col-publisher { min-width: 160px; }
+    .col-article-status { min-width: 120px; }
+    .col-pub-type { min-width: 140px; }
+    .col-collabs { min-width: 200px; }
+    .col-collab-orcid { min-width: 150px; }
+    .col-doi { min-width: 150px; }
+    .col-comment { min-width: 200px; }
+    .col-status { min-width: 120px; }
 
-    /* status cell highlighting */
-    .paid-bg { background: #e9f7ef; } /* light green */
+    /* status row highlighting */
+    .paid-bg { background: #e9f7ef !important; } /* light green */
+    .denied-bg { background: #fdeaea !important; } /* light red */
+    .cancelled-bg { background: #fff3cd !important; } /* light yellow/orange */
+    
+    /* hover effects for status rows */
+    .paid-bg:hover { background: #d4edda !important; } /* darker green on hover */
+    .denied-bg:hover { background: #f8d7da !important; } /* darker red on hover */
+    .cancelled-bg:hover { background: #ffeaa7 !important; } /* darker yellow on hover */
 
     /* dropdown (select) style */
     .action-select { padding: 7px 10px; border-radius: 999px; border: 1px solid #ccc; background: #fff; font-weight: 600; }
@@ -57,50 +139,54 @@
       <div class="budget-box">
         <span class="budget-label">Total Budget</span>
         <span id="totalBudget" class="budget-amount">—</span>
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3);">
+          <span class="budget-label">Running Total</span>
+          <span class="budget-amount" style="font-size: 1.4rem;" id="runningTotal">—</span>
+        </div>
       </div>
     </div>
   </header>
 
   <div class="wrapper">
-    <section class="card" style="margin-bottom:14px;">
-      <header class="section-head">
-        <h2>Dashboard</h2>
-        <div class="actions">
-          <button class="ghost" id="refreshBtn">Refresh</button>
-          <!-- <button class="ghost" id="historyBtn" type="button">Budget History</button> -->
+    <!-- Fixed sections that don't scroll -->
+    <div class="fixed-sections">
+      <section class="card" style="margin-bottom:14px;">
+        <header class="section-head">
+          <h2>Dashboard</h2>
+          <div class="actions">
+            <button class="ghost" id="refreshBtn">Refresh</button>
+            <button class="ghost" id="historyBtn" type="button">Budget History</button>
+            <button class="ghost" id="filesBtn" type="button">Files</button>
+          </div>
+        </header>
+        <div id="status" class="small">Loading…</div>
+      </section>
+    </div>
+
+    <!-- Scrollable requests section -->
+    <div class="scrollable-section">
+      <section id="requestsSection" class="card" style="height: 100%; display: flex; flex-direction: column;">
+        <header class="section-head" style="flex-shrink: 0;"><h2>Open Access Fund Requests</h2></header>
+        
+        <!-- Column Toggle Controls -->
+        <div class="column-controls" style="flex-shrink: 0;">
+          <span style="font-weight: 600; font-size: 0.9rem;">Show Columns:</span>
+          <button class="column-toggle active" data-priority="2">Author & Journal</button>
+          <button class="column-toggle active" data-priority="3">Details</button>
+          <button class="column-toggle active" data-priority="4">Extended Info</button>
+          <div class="columns-info">
+            <span id="columnsInfo">All columns visible</span>
+          </div>
         </div>
-      </header>
-      <div id="status" class="small">Loading…</div>
-    </section>
-
-    <!-- REQUESTS VIEW -->
-    <section id="requestsSection" class="card">
-      <header class="section-head"><h2>Open Access Fund Requests</h2></header>
-      <div class="table-wrap">
-        <table id="requestsTable" aria-describedby="status">
-          <thead id="thead"></thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- BUDGET HISTORY VIEW -->
-    <section id="historySection" class="card hidden">
-      <header class="section-head"><h2>Budget History</h2></header>
-      <div class="table-wrap">
-        <table aria-describedby="status">
-          <thead>
-            <tr>
-              <th>Timestamp</th>
-              <th>Total Amount</th>
-              <th>Change</th>
-              <th>Reason</th>
-            </tr>
-          </thead>
-          <tbody id="historyBody"></tbody>
-        </table>
-      </div>
-    </section>
+        
+        <div class="table-wrap" style="flex: 1; overflow: auto;">
+          <table id="requestsTable" aria-describedby="status">
+            <thead id="thead"></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
   </div>
 
   <script>
@@ -129,23 +215,23 @@
     })();
 
     (function () {
-      // const fetchUrl = "<%= typeof fetchUrl !== 'undefined' ? fetchUrl : 'https://localhost:3000/fetch' %>";
-      // const fetchBudgetUrl = "<%= typeof fetchBudgetUrl !== 'undefined' ? fetchBudgetUrl : 'https://localhost:3000/fetchBudget' %>";
-      const fetchUrl = "<%= typeof fetchUrl !== 'undefined' ? fetchUrl : 'https://oafund.library.brandeis.edu/fetch' %>";
-      const fetchBudgetUrl = "<%= typeof fetchBudgetUrl !== 'undefined' ? fetchBudgetUrl : 'https://oafund.library.brandeis.edu/fetchBudget' %>";
+      const fetchUrl = "<%= typeof fetchUrl !== 'undefined' ? fetchUrl : 'http://localhost:3000/fetch' %>";
+      const fetchBudgetUrl = "<%= typeof fetchBudgetUrl !== 'undefined' ? fetchBudgetUrl : 'http://localhost:3000/fetchBudget' %>";
+      // const fetchUrl = "<%= typeof fetchUrl !== 'undefined' ? fetchUrl : 'https://oafund.library.brandeis.edu/fetch' %>";
+      // const fetchBudgetUrl = "<%= typeof fetchBudgetUrl !== 'undefined' ? fetchBudgetUrl : 'https://oafund.library.brandeis.edu/fetchBudget' %>";
 
       // Endpoints (no trailing slash). We'll append /:timestamp at runtime.
       const endpoints = {
-        // APPROVED: "<%= typeof approveUrl !== 'undefined' ? approveUrl.replace(/\/$/, '') : 'https://localhost:3000/approve' %>",
-        // DENIED: "<%= typeof denyUrl !== 'undefined' ? denyUrl.replace(/\/$/, '') : 'https://localhost:3000/deny' %>",
-        // CANCELLED: "<%= typeof cancelUrl !== 'undefined' ? cancelUrl.replace(/\/$/, '') : 'https://localhost:3000/cancel' %>",
-        // PAID: "<%= typeof paidUrl !== 'undefined' ? paidUrl.replace(/\/$/, '') : 'https://localhost:3000/paid' %>",
-        // PAYMENT_PLANNED: "<%= typeof paymentPlannedUrl !== 'undefined' ? paymentPlannedUrl.replace(/\/$/, '') : 'https://localhost:3000/planned' %>"
-        APPROVED: "<%= typeof approveUrl !== 'undefined' ? approveUrl.replace(/\/$/, '') : 'https://oafund.library.brandeis.edu/approve' %>",
-        DENIED: "<%= typeof denyUrl !== 'undefined' ? denyUrl.replace(/\/$/, '') : 'https://oafund.library.brandeis.edu/deny' %>",
-        CANCELLED: "<%= typeof cancelUrl !== 'undefined' ? cancelUrl.replace(/\/$/, '') : 'https://oafund.library.brandeis.edu/cancel' %>",
-        PAID: "<%= typeof paidUrl !== 'undefined' ? paidUrl.replace(/\/$/, '') : 'https://oafund.library.brandeis.edu/paid' %>",
-        PAYMENT_PLANNED: "<%= typeof paymentPlannedUrl !== 'undefined' ? paymentPlannedUrl.replace(/\/$/, '') : 'https://oafund.library.brandeis.edu/planned' %>"
+        APPROVED: "<%= typeof approveUrl !== 'undefined' ? approveUrl.replace(/\/$/, '') : 'http://localhost:3000/approve' %>",
+        DENIED: "<%= typeof denyUrl !== 'undefined' ? denyUrl.replace(/\/$/, '') : 'http://localhost:3000/deny' %>",
+        CANCELLED: "<%= typeof cancelUrl !== 'undefined' ? cancelUrl.replace(/\/$/, '') : 'http://localhost:3000/cancel' %>",
+        PAID: "<%= typeof paidUrl !== 'undefined' ? paidUrl.replace(/\/$/, '') : 'http://localhost:3000/paid' %>",
+        PAYMENT_PLANNED: "<%= typeof paymentPlannedUrl !== 'undefined' ? paymentPlannedUrl.replace(/\/$/, '') : 'http://localhost:3000/planned' %>"
+        // APPROVED: "<%= typeof approveUrl !== 'undefined' ? approveUrl.replace(/\/$/, '') : 'https://oafund.library.brandeis.edu/approve' %>",
+        // DENIED: "<%= typeof denyUrl !== 'undefined' ? denyUrl.replace(/\/$/, '') : 'https://oafund.library.brandeis.edu/deny' %>",
+        // CANCELLED: "<%= typeof cancelUrl !== 'undefined' ? cancelUrl.replace(/\/$/, '') : 'https://oafund.library.brandeis.edu/cancel' %>",
+        // PAID: "<%= typeof paidUrl !== 'undefined' ? paidUrl.replace(/\/$/, '') : 'https://oafund.library.brandeis.edu/paid' %>",
+        // PAYMENT_PLANNED: "<%= typeof paymentPlannedUrl !== 'undefined' ? paymentPlannedUrl.replace(/\/$/, '') : 'https://oafund.library.brandeis.edu/planned' %>"
       };
 
       const statusEl = document.getElementById('status');
@@ -153,22 +239,48 @@
       const tbody = document.getElementById('tbody');
       const refreshBtn = document.getElementById('refreshBtn');
       const totalBudgetEl = document.getElementById('totalBudget');
+      const runningTotalEl = document.getElementById('runningTotal');
+      const historyBtn = document.getElementById('historyBtn');
+      const filesBtn = document.getElementById('filesBtn');
+      const columnsInfo = document.getElementById('columnsInfo');
 
-      const requestsSection = document.getElementById('requestsSection');
-      const historySection = document.getElementById('historySection');
-      const historyBody = document.getElementById('historyBody');
-      // const historyBtn = document.getElementById('historyBtn');
+      // Navigate to budget history page
+      historyBtn.addEventListener('click', () => {
+        window.location.href = '/budget-history';
+      });
 
-      // Toggle button: switches between Requests <-> History
-      // historyBtn.addEventListener('click', () => {
-      //   const showHistory = historySection.classList.contains('hidden');
-      //   setView(showHistory ? 'history' : 'requests');
-      // });
-      function setView(which) {
-        const showHistory = which === 'history';
-        requestsSection.classList.toggle('hidden', showHistory);
-        historySection.classList.toggle('hidden', !showHistory);
-        // historyBtn.textContent = showHistory ? 'Back to Requests' : 'Budget History';
+      // Navigate to files page
+      filesBtn.addEventListener('click', () => {
+        window.location.href = '/files-page';
+      });
+
+      // Column toggle functionality
+      document.querySelectorAll('.column-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const groupId = btn.getAttribute('data-priority'); // keeping same attribute name for compatibility
+          btn.classList.toggle('active');
+          
+          // Toggle column visibility
+          const isVisible = btn.classList.contains('active');
+          document.querySelectorAll(`.toggle-group-${groupId}`).forEach(el => {
+            el.style.display = isVisible ? '' : 'none';
+          });
+          
+          updateColumnsInfo();
+        });
+      });
+
+      function updateColumnsInfo() {
+        const activeToggles = document.querySelectorAll('.column-toggle.active');
+        const totalToggles = document.querySelectorAll('.column-toggle');
+        
+        if (activeToggles.length === totalToggles.length) {
+          columnsInfo.textContent = 'All columns visible';
+        } else if (activeToggles.length === 0) {
+          columnsInfo.textContent = 'Only essential columns visible';
+        } else {
+          columnsInfo.textContent = `${activeToggles.length + 1} of ${totalToggles.length + 1} column groups visible`;
+        }
       }
 
       refreshBtn.addEventListener('click', () => { loadData(); loadBudget(); });
@@ -184,28 +296,127 @@
           return;
         }
         const cols = Array.from(new Set(rows.flatMap(r => Object.keys(r))));
+        // Define custom column titles mapping
+        const columnTitles = {
+          'Timestamp': 'Timestamp',
+          'Email Address': 'Email',
+          'Title of Article / Chapter / Book': 'Title',
+          'Amount requested from open access fund': 'Amount',
+          'Corresponding Author Name': 'Author',
+          'Corresponding Author ORCiD': 'Author ORCiD',
+          'Title of Journal': 'Journal',
+          'Journal ISSN': 'Journal ISSN',
+          'Publisher': 'Publisher',
+          'Article Status': 'Article Status',
+          'Publication Type': 'Publication Type',
+          'Collaborating Author List': 'Collabs',
+          'Collaborating Author ORCiD List (Optional)': 'Collab ORCiDs',
+          'DOI (if applicable)': 'DOI',
+          'Comment to library publishing team': 'Comment',
+          'OA fund status': 'OA Fund Status'
+        };
+
+        // Define column groups for manual toggles
+        const columnGroups = {
+          // Group 2: Author & Journal info
+          'group2': ['Corresponding Author Name', 'Title of Journal', 'Publisher'],
+          
+          // Group 3: Details
+          'group3': ['Article Status', 'Publication Type', 'Journal ISSN'],
+          
+          // Group 4: Extended info
+          'group4': ['Corresponding Author ORCiD', 'Collaborating Author List', 'Collaborating Author ORCiD List (Optional)', 'DOI (if applicable)', 'Comment to library publishing team']
+        };
+        
+        // UPDATE THIS TO REFLECT THE COLUMN ORDER
         const prefer = [
           'Timestamp','Email Address','Title of Article / Chapter / Book','Amount requested from open access fund',
-          'Corresponding Author Name','Corresponding Author ORCiD','Collaborating Author List','Collaborating Author ORCiD List (Optional)',
-          'Title of Journal','Journal ISSN','Publisher','Article Status','Publication Type','DOI (if applicable)','Comment to library publishing team','OA fund status'
+          'Corresponding Author Name','Corresponding Author ORCiD','Title of Journal','Journal ISSN','Publisher',
+          'Article Status','Publication Type','Collaborating Author List','Collaborating Author ORCiD List (Optional)',
+          'DOI (if applicable)','Comment to library publishing team','OA fund status'
         ];
         cols.sort((a,b)=>{ const ia = prefer.indexOf(a), ib = prefer.indexOf(b); if (ia === -1 && ib === -1) return a.localeCompare(b); if (ia === -1) return 1; if (ib === -1) return -1; return ia - ib; });
-        thead.innerHTML = '<tr>' + cols.map(c => `<th>${c}</th>`).join('') + '<th class="nowrap">Actions</th>' + '</tr>';
+        
+        // Generate table header with group classes for manual toggles
+        const headerCells = cols.map(c => {
+          let groupClass = '';
+          let colClass = '';
+          
+          // Apply toggle group classes
+          if (columnGroups.group2.includes(c)) groupClass = 'toggle-group-2';
+          else if (columnGroups.group3.includes(c)) groupClass = 'toggle-group-3';
+          else if (columnGroups.group4.includes(c)) groupClass = 'toggle-group-4';
+          
+          // Apply specific column width classes
+          if (c === 'Timestamp') colClass = 'col-timestamp';
+          else if (c === 'Email Address') colClass = 'col-email';
+          else if (c === 'Title of Article / Chapter / Book') colClass = 'col-title';
+          else if (c === 'Amount requested from open access fund') colClass = 'col-amount';
+          else if (c === 'Corresponding Author Name') colClass = 'col-author';
+          else if (c === 'Corresponding Author ORCiD') colClass = 'col-orcid';
+          else if (c === 'Title of Journal') colClass = 'col-journal';
+          else if (c === 'Journal ISSN') colClass = 'col-issn';
+          else if (c === 'Publisher') colClass = 'col-publisher';
+          else if (c === 'Article Status') colClass = 'col-article-status';
+          else if (c === 'Publication Type') colClass = 'col-pub-type';
+          else if (c === 'Collaborating Author List') colClass = 'col-collabs';
+          else if (c === 'Collaborating Author ORCiD List (Optional)') colClass = 'col-collab-orcid';
+          else if (c === 'DOI (if applicable)') colClass = 'col-doi';
+          else if (c === 'Comment to library publishing team') colClass = 'col-comment';
+          else if (c === 'OA fund status') colClass = 'col-status';
+          
+          const displayTitle = columnTitles[c] || c;
+          return `<th class="${(groupClass + ' ' + colClass).trim()}">${displayTitle}</th>`;
+        }).join('');
+        thead.innerHTML = '<tr>' + headerCells + '<th class="nowrap">Actions</th>' + '</tr>';
 
         const frag = document.createDocumentFragment();
         rows.forEach((row) => {
           const tr = document.createElement('tr');
           cols.forEach(col => {
             const td = document.createElement('td');
+            
             let val = row[col];
             if (col === 'Timestamp' && val) val = fmtDate(val);
-            // highlight PAID status
+            
+            // highlight row based on status
             if (col === 'OA fund status') {
               const v = String(val || '').trim().toUpperCase();
-              if (v === 'PAID') td.classList.add('paid-bg');
+              if (v === 'PAID') tr.classList.add('paid-bg');
+              else if (v === 'DENIED') tr.classList.add('denied-bg');
+              else if (v === 'CANCELLED') tr.classList.add('cancelled-bg');
+              td.classList.add('nowrap');
             }
+            
+            // Apply group classes for manual toggles and specific column classes
+            let groupClass = '';
+            let colClass = '';
+            
+            if (columnGroups.group2.includes(col)) groupClass = 'toggle-group-2';
+            else if (columnGroups.group3.includes(col)) groupClass = 'toggle-group-3';
+            else if (columnGroups.group4.includes(col)) groupClass = 'toggle-group-4';
+            
+            // Apply specific column width classes
+            if (col === 'Timestamp') colClass = 'col-timestamp';
+            else if (col === 'Email Address') colClass = 'col-email';
+            else if (col === 'Title of Article / Chapter / Book') colClass = 'col-title';
+            else if (col === 'Amount requested from open access fund') colClass = 'col-amount';
+            else if (col === 'Corresponding Author Name') colClass = 'col-author';
+            else if (col === 'Corresponding Author ORCiD') colClass = 'col-orcid';
+            else if (col === 'Title of Journal') colClass = 'col-journal';
+            else if (col === 'Journal ISSN') colClass = 'col-issn';
+            else if (col === 'Publisher') colClass = 'col-publisher';
+            else if (col === 'Article Status') colClass = 'col-article-status';
+            else if (col === 'Publication Type') colClass = 'col-pub-type';
+            else if (col === 'Collaborating Author List') colClass = 'col-collabs';
+            else if (col === 'Collaborating Author ORCiD List (Optional)') colClass = 'col-collab-orcid';
+            else if (col === 'DOI (if applicable)') colClass = 'col-doi';
+            else if (col === 'Comment to library publishing team') colClass = 'col-comment';
+            else if (col === 'OA fund status') colClass = 'col-status';
+            
+            td.className = (groupClass + ' ' + colClass).trim();
+            
             td.textContent = (val == null ? '' : String(val));
-            if (col === 'OA fund status') td.classList.add('nowrap');
             tr.appendChild(td);
           });
 
@@ -234,7 +445,7 @@
           { label: 'Paid',            key: 'PAID' },
           { label: 'Payment Planned', key: 'PAYMENT_PLANNED' }
         ];
-        if (s === 'PAYMENT PLANNED' || s === 'TRANSACTION_PLANNED' || s === 'PLANNED') return [
+        if (s === 'PAYMENT_PLANNED' || s === 'TRANSACTION_PLANNED' || s === 'PLANNED') return [
           { label: 'Paid', key: 'PAID' }
         ];
         // DENIED / PAID -> no actions
@@ -284,7 +495,7 @@
         } finally {
           controlEl.disabled = false;
           loadData();
-          loadBudget(); // refresh total + history on every action
+          loadBudget(); // refresh total on every action
         }
       }
 
@@ -313,27 +524,17 @@
           if (arr.length) {
             const last = arr[arr.length - 1];
             const total = last && (Number(last['Total Amount']) || Number(last.total) || Number(last.amount));
+            const runningTotal = last && (Number(last['RunningTotal']) || Number(last.runningTotal) || 0);
             totalBudgetEl.textContent = (total != null && isFinite(total)) ? money(total) : 'N/A';
-            arr = arr.reverse()
-            renderHistory(arr);
-          } else { totalBudgetEl.textContent = 'N/A'; renderHistory([]); }
-        } catch (e) { totalBudgetEl.textContent = 'N/A'; renderHistory([]); }
-      }
-
-      function renderHistory(rows) {
-        historyBody.innerHTML = '';
-        if (!rows || !rows.length) { historyBody.innerHTML = '<tr><td colspan="4" class="small">No history.</td></tr>'; return; }
-        const frag = document.createDocumentFragment();
-        rows.forEach(r => {
-          const tr = document.createElement('tr');
-          const td1 = document.createElement('td'); td1.textContent = fmtDate(r['Timestamp'] || r.timestamp || '');
-          const td2 = document.createElement('td'); td2.textContent = money(r['Total Amount'] ?? r.total ?? r.amount ?? '');
-          const td3 = document.createElement('td'); td3.textContent = money(r['Change'] ?? r.change ?? 0);
-          const td4 = document.createElement('td'); td4.textContent = (r['Reason'] ?? r.reason ?? '') + '';
-          tr.append(td1, td2, td3, td4);
-          frag.appendChild(tr);
-        });
-        historyBody.appendChild(frag);
+            runningTotalEl.textContent = (runningTotal != null && isFinite(runningTotal)) ? money(runningTotal) : 'N/A';
+          } else { 
+            totalBudgetEl.textContent = 'N/A'; 
+            runningTotalEl.textContent = 'N/A';
+          }
+        } catch (e) { 
+          totalBudgetEl.textContent = 'N/A'; 
+          runningTotalEl.textContent = 'N/A';
+        }
       }
 
       // initial

@@ -3,104 +3,778 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title><%= typeof pageTitle !== 'undefined' ? pageTitle : 'Upload PDF(s)' %></title>
+  <title><%= typeof pageTitle !== 'undefined' ? pageTitle : 'Upload Documents - Brandeis University Library' %></title>
+  <link rel="icon" type="image/png" href="/public/brandeis.png">
+  <link rel="shortcut icon" type="image/png" href="/public/brandeis.png">
   <style>
-    :root { --radius: 16px; }
+    :root { 
+      --radius: 16px; 
+      --gap: 12px; 
+      --brandeis-blue: #123374;
+      --brandeis-light-blue: #4a90e2;
+      --brandeis-gray: #666;
+      --brandeis-light-gray: #f8f9fa;
+    }
     * { box-sizing: border-box; }
     html, body { height: 100%; }
     body {
-      margin: 0; background: #fff; color: #111;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      line-height: 1.45; display: grid; place-items: center; padding: 24px;
+      margin: 0;
+      background: #fff;
+      color: #333;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
     }
-    .card { width: min(640px, 100%); background: #fff; border: 1px solid #eee; border-radius: var(--radius);
-      box-shadow: 0 1px 6px rgba(0,0,0,.06); padding: 24px; text-align: center; }
-    h1 { margin: 0 0 12px; font-size: 1.4rem; }
-    p.note { margin: 0 0 16px; color: #555; }
-    form { display: grid; gap: 14px; justify-items: center; }
-    .row { width: 100%; display: grid; gap: 6px; }
-    input[type="file"], input[type="email"] {
-      width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 12px; background: #fff;
+
+    /* Brandeis Header */
+    .brandeis-header {
+      background: var(--brandeis-blue);
+      color: white;
+      padding: 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    button { padding: 10px 14px; border: 0; border-radius: 999px; background: #111; color: #fff; font-weight: 700; cursor: pointer; }
-    .files-list { text-align: left; font-size: .95rem; margin-top: 4px; color: #333; }
-    .files-list li { margin: 4px 0; }
-    .status { margin-top: 8px; color: #444; font-size: .95rem; }
+    .header-main {
+      padding: 15px 0;
+    }
+    .header-main .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brandeis-logo {
+      display: flex;
+      align-items: center;
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: white;
+      text-decoration: none;
+    }
+    .header-nav ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      gap: 30px;
+    }
+    .header-nav a {
+      color: white;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .header-nav a:hover {
+      color: #ccc;
+    }
+
+    /* Breadcrumb */
+    .breadcrumb {
+      background: var(--brandeis-light-gray);
+      padding: 12px 0;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .breadcrumb .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .breadcrumb-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    .breadcrumb-nav {
+      font-size: 0.9rem;
+      color: var(--brandeis-gray);
+    }
+    .breadcrumb-nav a {
+      color: var(--brandeis-blue);
+      text-decoration: none;
+    }
+    .breadcrumb-nav a:hover {
+      text-decoration: underline;
+    }
+    .page-nav-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .page-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      background: white;
+      color: var(--brandeis-blue);
+      text-decoration: none;
+      border-radius: 6px;
+      border: 1px solid #dee2e6;
+      font-weight: 500;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    .page-nav-btn:hover {
+      background: var(--brandeis-blue);
+      color: white;
+      border-color: var(--brandeis-blue);
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    }
+    .card {
+      width: min(640px, 100%);
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: var(--radius);
+      box-shadow: 0 4px 12px rgba(0,0,0,.08);
+      padding: 40px;
+      text-align: center;
+    }
+    .card h1 { 
+      margin: 0 0 8px; 
+      font-size: 2rem; 
+      color: var(--brandeis-blue);
+      font-weight: 300;
+    }
+    .note { 
+      margin: 0 0 25px; 
+      color: #666; 
+      font-size: .95rem; 
+      padding: 15px;
+      background: #f8f9fa;
+      border-left: 4px solid var(--brandeis-light-blue);
+      border-radius: 4px;
+      text-align: left;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--gap);
+      text-align: left;
+    }
+    label { display: grid; gap: 6px; font-weight: 600; }
+
+    input[type="email"], input[type="file"], input[type="url"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      font: inherit;
+      background: #fff;
+      transition: border-color 0.2s;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--brandeis-blue);
+      box-shadow: 0 0 0 2px rgba(18, 51, 116, 0.1);
+    }
+    input.error {
+      border-color: #dc3545;
+      box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.1);
+    }
+
+    .required-note {
+      font-size: 0.8rem;
+      font-weight: 400;
+      color: #dc3545;
+      font-style: italic;
+    }
+
+    .error-message {
+      display: block;
+      color: #dc3545;
+      font-size: 0.85rem;
+      margin-top: 4px;
+      min-height: 1.2em;
+      font-weight: 500;
+    }
+
+    /* Upload Mode Selection */
+    .upload-mode-selection {
+      margin-bottom: 25px;
+      text-align: center;
+    }
+    .upload-mode-selection h3 {
+      margin: 0 0 15px;
+      color: var(--brandeis-gray);
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .mode-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .mode-btn {
+      padding: 10px 20px;
+      border: 2px solid #dee2e6;
+      background: white;
+      color: var(--brandeis-gray);
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.95rem;
+    }
+    .mode-btn:hover {
+      border-color: var(--brandeis-blue);
+      color: var(--brandeis-blue);
+    }
+    .mode-btn.active {
+      background: var(--brandeis-blue);
+      color: white;
+      border-color: var(--brandeis-blue);
+    }
+
+    /* URL Upload Styling */
+    .url-info {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border-left: 3px solid var(--brandeis-light-blue);
+    }
+    .url-info small {
+      color: var(--brandeis-gray);
+      font-style: italic;
+    }
+
+    .files-list { 
+      text-align: left; 
+      font-size: .9rem; 
+      margin-top: 8px; 
+      color: #333; 
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 10px;
+      border: 1px solid #e9ecef;
+    }
+    .files-list li { 
+      margin: 6px 0; 
+      padding: 4px 0;
+      border-bottom: 1px solid #e9ecef;
+    }
+    .files-list li:last-child {
+      border-bottom: none;
+    }
+
+    .submit {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px 24px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--brandeis-blue);
+      color: #fff;
+      font-weight: 600;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .submit:hover { 
+      background: var(--brandeis-light-blue);
+    }
+    .submit:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    .submit:disabled:hover {
+      background: #ccc;
+    }
+
+    #status { 
+      display: block; 
+      margin-top: 15px; 
+      font-size: 1rem; 
+      color: #333; 
+      font-weight: 500;
+      text-align: center;
+      padding: 10px;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+    #status:not(:empty) {
+      background-color: #f8f9fa;
+      border: 1px solid #dee2e6;
+    }
+
+
+    /* Footer */
+    .brandeis-footer {
+      background: var(--brandeis-blue);
+      color: white;
+      padding: 40px 0 20px;
+      margin-top: auto;
+    }
+    .footer-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .footer-main {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 40px;
+      margin-bottom: 30px;
+    }
+    .footer-section h3 {
+      margin: 0 0 15px;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .footer-section ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .footer-section ul li {
+      margin-bottom: 8px;
+    }
+    .footer-section a {
+      color: #ccc;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-section a:hover {
+      color: white;
+    }
+    .footer-bottom {
+      border-top: 1px solid #2a4a7f;
+      padding-top: 20px;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+    .footer-bottom p {
+      margin: 5px 0;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .header-main .container {
+        flex-direction: column;
+        gap: 15px;
+      }
+      .header-nav ul {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 15px;
+      }
+      .card {
+        padding: 30px 20px;
+      }
+      .footer-main {
+        grid-template-columns: 1fr;
+        gap: 25px;
+      }
+    }
   </style>
 </head>
 <body>
-  <main class="card">
-    <h1>Upload PDF(s)</h1>
-    <p class="note">Enter your email and choose one or more PDF files to upload.</p>
+  <!-- Brandeis Header -->
+  <header class="brandeis-header">
+    <div class="header-main">
+      <div class="container">
+        <a href="https://www.brandeis.edu" class="brandeis-logo">Brandeis University</a>
+        <nav class="header-nav">
+          <ul>
+            <li><a href="https://www.brandeis.edu/library/">Library</a></li>
+            <li><a href="https://www.brandeis.edu/academics/">Academics</a></li>
+            <li><a href="https://www.brandeis.edu/research/">Research</a></li>
+            <li><a href="https://www.brandeis.edu/admissions/">Admissions</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </header>
 
-    <!-- <form id="uploadForm"
-          action="<%= typeof uploadUrl !== 'undefined' ? uploadUrl : 'http://localhost:3000/upload' %>"
-          method="post" enctype="multipart/form-data" aria-describedby="status"> -->
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb">
+    <div class="container">
+      <div class="breadcrumb-content">
+        <div class="breadcrumb-nav">
+          <a href="https://www.brandeis.edu">Home</a> > 
+          <a href="https://www.brandeis.edu/library/">Library</a> > 
+          <span>Document Upload</span>
+        </div>
+        <div class="page-nav-buttons">
+          <a href="/" class="page-nav-btn">Submit Request</a>
+          <a href="/login" class="page-nav-btn">Admin Login</a>
+        </div>
+      </div>
+    </div>
+  </nav>
 
-      <form id="uploadForm"
-        action="<%= typeof uploadUrl !== 'undefined' ? uploadUrl : 'https://oafund.library.brandeis.edu/upload' %>"
-        method="post" enctype="multipart/form-data" aria-describedby="status">
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="card">
+      <h1>Upload Documents</h1>
+      <p class="note">
+        <strong>Document Upload:</strong> Upload PDF documents or provide URLs related to your Open Access Fund request. Please enter your Brandeis email address and choose your upload method.
+      </p>
 
-      <div class="row">
-        <label for="email" style="font-weight:600; text-align:left;">Email <span aria-hidden="true">*</span></label>
-        <input id="email" name="email" type="email" required placeholder="you@example.com" />
+      <!-- Upload Mode Selection -->
+      <div class="upload-mode-selection">
+        <h3>Choose Upload Method</h3>
+        <div class="mode-buttons">
+          <button type="button" id="fileModeBtn" class="mode-btn active">Upload PDF Files</button>
+          <button type="button" id="urlModeBtn" class="mode-btn">Submit URL</button>
+        </div>
       </div>
 
-      <div class="row">
-        <label for="pdfs" style="font-weight:600; text-align:left;">Select PDF file(s)</label>
-        <input id="pdfs" name="pdfs" type="file" accept="application/pdf" multiple required />
-        <ul id="chosen" class="files-list"></ul>
-      </div>
+      <form id="uploadForm" method="post" aria-describedby="status">
 
-      <button type="submit">Upload</button>
-      <output id="status" class="status" role="status" aria-live="polite"></output>
-    </form>
+        <div class="grid">
+          <label for="email">Email * <span class="required-note">[Must end with @brandeis.edu]</span>
+            <input id="email" name="email" type="email" required placeholder="you@brandeis.edu" />
+            <span class="error-message" id="email-error"></span>
+          </label>
+
+          <!-- File Upload Section -->
+          <div id="fileUploadSection">
+            <label for="pdfs">Select PDF file(s) *
+              <input id="pdfs" name="pdfs" type="file" accept="application/pdf" multiple />
+              <ul id="chosen" class="files-list" style="display: none;"></ul>
+            </label>
+          </div>
+
+          <!-- URL Upload Section -->
+          <div id="urlUploadSection" style="display: none;">
+            <label for="documentUrl">Document URL *
+              <!-- <span class="required-note">[Any URL format accepted]</span> -->
+              <input id="documentUrl" name="url" type="url" placeholder="https://example.com/document.pdf" />
+              <!-- <span class="error-message" id="url-error"></span> -->
+            </label>
+            <!-- <div class="url-info">
+              <small>Any URL format accepted: Direct links, DOI links, journal URLs, preprint servers, repository links, etc.</small>
+            </div> -->
+          </div>
+        </div>
+
+        <button type="submit" class="submit" id="submitBtn">Upload Documents</button>
+        <output id="status" role="status" aria-live="polite"></output>
+      </form>
+
+    </div>
   </main>
+
+  <!-- Brandeis Footer -->
+  <footer class="brandeis-footer">
+    <div class="footer-content">
+      <div class="footer-main">
+        <div class="footer-section">
+          <h3>Brandeis University</h3>
+          <ul>
+            <li><a href="https://www.brandeis.edu/about/">About Brandeis</a></li>
+            <li><a href="https://www.brandeis.edu/academics/">Academics</a></li>
+            <li><a href="https://www.brandeis.edu/admissions/">Admissions</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h3>Library Services</h3>
+          <ul>
+            <li><a href="https://www.brandeis.edu/library/">Library Home</a></li>
+            <li><a href="https://www.brandeis.edu/library/research/">Research Support</a></li>
+            <li><a href="https://www.brandeis.edu/library/services/">Services</a></li>
+            <li><a href="https://www.brandeis.edu/library/about/">About the Library</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h3>Resources</h3>
+          <ul>
+            <li><a href="https://search.library.brandeis.edu/">One Search</a></li>
+            <li><a href="https://guides.library.brandeis.edu/">Research Guides</a></li>
+            <li><a href="https://guides.library.brandeis.edu/az/databases">Databases A-Z</a></li>
+            <li><a href="https://search.library.brandeis.edu/">Journals A-Z</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h3>Contact Information</h3>
+          <ul>
+            <li>Goldfarb Library</li>
+            <li>415 South Street</li>
+            <li>Waltham, MA 02453</li>
+            <li><a href="mailto:library@brandeis.edu">librarypublishing@brandeis.edu</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; <%= new Date().getFullYear() %> Brandeis University. All rights reserved.
+          <a href="https://www.brandeis.edu/about/privacy.html">Privacy Policy</a> | 
+          <a href="https://www.brandeis.edu/about/accessibility-statement.html">Accessibility</a>
+        </p>
+      </div>
+    </div>
+  </footer>
 
   <script>
     (function () {
       const form = document.getElementById('uploadForm');
       const emailInput = document.getElementById('email');
       const fileInput = document.getElementById('pdfs');
+      const urlInput = document.getElementById('documentUrl');
       const chosen = document.getElementById('chosen');
       const statusEl = document.getElementById('status');
 
+      // Mode selection elements
+      const fileModeBtn = document.getElementById('fileModeBtn');
+      const urlModeBtn = document.getElementById('urlModeBtn');
+      const fileUploadSection = document.getElementById('fileUploadSection');
+      const urlUploadSection = document.getElementById('urlUploadSection');
+
       const bearerToken = "<%= typeof token !== 'undefined' ? token : '' %>";
+      let currentMode = 'file'; // 'file' or 'url'
+
+      // Email validation functions
+      function showEmailError(message) {
+        const errorEl = document.getElementById('email-error');
+        if (errorEl) {
+          errorEl.textContent = message;
+        }
+        emailInput.classList.add('error');
+      }
+
+      function clearEmailError() {
+        const errorEl = document.getElementById('email-error');
+        if (errorEl) {
+          errorEl.textContent = '';
+        }
+        emailInput.classList.remove('error');
+      }
+
+      function validateEmail() {
+        const email = emailInput.value.trim();
+        
+        if (!email) {
+          showEmailError('Email is required');
+          return false;
+        }
+        
+        if (!email.endsWith('@brandeis.edu')) {
+          showEmailError('Email must end with @brandeis.edu');
+          return false;
+        }
+        
+        // Basic email format validation
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(email)) {
+          showEmailError('Please enter a valid email address');
+          return false;
+        }
+        
+        clearEmailError();
+        return true;
+      }
+
+      // Real-time email validation
+      emailInput.addEventListener('blur', validateEmail);
+      emailInput.addEventListener('input', () => {
+        if (emailInput.classList.contains('error')) {
+          validateEmail();
+        }
+      });
+
+      // URL validation functions
+      function showUrlError(message) {
+        const errorEl = document.getElementById('url-error');
+        if (errorEl) {
+          errorEl.textContent = message;
+        }
+        urlInput.classList.add('error');
+      }
+
+      function clearUrlError() {
+        const errorEl = document.getElementById('url-error');
+        if (errorEl) {
+          errorEl.textContent = '';
+        }
+        urlInput.classList.remove('error');
+      }
+
+      function validateUrl() {
+        const url = urlInput.value.trim();
+        
+        if (!url) {
+          showUrlError('URL is required');
+          return false;
+        }
+        
+        clearUrlError();
+        return true;
+      }
+
+      // Real-time URL validation
+      urlInput.addEventListener('blur', validateUrl);
+      urlInput.addEventListener('input', () => {
+        if (urlInput.classList.contains('error')) {
+          validateUrl();
+        }
+      });
+
+      // Mode switching functionality
+      function switchMode(mode) {
+        currentMode = mode;
+        const submitBtn = document.getElementById('submitBtn');
+        
+        if (mode === 'file') {
+          fileModeBtn.classList.add('active');
+          urlModeBtn.classList.remove('active');
+          fileUploadSection.style.display = 'block';
+          urlUploadSection.style.display = 'none';
+          fileInput.required = true;
+          urlInput.required = false;
+          submitBtn.textContent = 'Upload Documents';
+          clearUrlError();
+        } else {
+          urlModeBtn.classList.add('active');
+          fileModeBtn.classList.remove('active');
+          fileUploadSection.style.display = 'none';
+          urlUploadSection.style.display = 'block';
+          fileInput.required = false;
+          urlInput.required = true;
+          submitBtn.textContent = 'Submit URL';
+          chosen.style.display = 'none';
+        }
+      }
+
+      // Mode button event listeners
+      fileModeBtn.addEventListener('click', () => switchMode('file'));
+      urlModeBtn.addEventListener('click', () => switchMode('url'));
 
       fileInput.addEventListener('change', () => {
         chosen.innerHTML = '';
-        const frag = document.createDocumentFragment();
-        for (const f of fileInput.files) {
-          const li = document.createElement('li');
-          li.textContent = `${f.name} (${(f.size/1024/1024).toFixed(2)} MB)`;
-          frag.appendChild(li);
+        if (fileInput.files.length > 0) {
+          chosen.style.display = 'block';
+          const frag = document.createDocumentFragment();
+          for (const f of fileInput.files) {
+            const li = document.createElement('li');
+            li.innerHTML = `<strong>${f.name}</strong> <span style="color: #666;">(${(f.size/1024/1024).toFixed(2)} MB)</span>`;
+            frag.appendChild(li);
+          }
+          chosen.appendChild(frag);
+        } else {
+          chosen.style.display = 'none';
         }
-        chosen.appendChild(frag);
       });
 
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = (emailInput.value || '').trim();
-        if (!email) { statusEl.textContent = 'Please enter your email.'; return; }
-        if (!fileInput.files || fileInput.files.length === 0) { statusEl.textContent = 'Please choose at least one PDF.'; return; }
+        
+        // Validate email
+        if (!validateEmail()) {
+          statusEl.textContent = 'Please correct the email address and try again.';
+          statusEl.style.color = '#dc3545';
+          return;
+        }
+        
+        // Validate based on current mode
+        if (currentMode === 'file') {
+          if (!fileInput.files || fileInput.files.length === 0) { 
+            statusEl.textContent = 'Please select at least one PDF file.'; 
+            statusEl.style.color = '#dc3545';
+            return; 
+          }
+        } else {
+          if (!validateUrl()) {
+            statusEl.textContent = 'Please correct the URL and try again.';
+            statusEl.style.color = '#dc3545';
+            return;
+          }
+        }
 
-        statusEl.textContent = 'Uploading…';
-
-        // Build FormData directly; server may prefix filenames using req.body.email
-        const fd = new FormData(form);
-
-        const headers = { 'Accept': 'application/json; charset=utf-8' };
-        if (bearerToken) headers['Authorization'] = `Bearer ${bearerToken}`;
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const loadingText = currentMode === 'file' ? 'Uploading documents...' : 'Submitting URL...';
+        statusEl.textContent = loadingText;
+        statusEl.style.color = '#333';
+        submitBtn.disabled = true;
+        submitBtn.textContent = currentMode === 'file' ? 'Uploading...' : 'Submitting...';
 
         try {
-          const res = await fetch(form.action, { method: 'POST', body: fd, headers });
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          // Simpler UX: no links or file list after upload
-          statusEl.textContent = 'Upload complete.';
+          let response;
+          
+          if (currentMode === 'file') {
+            // File upload
+            const fd = new FormData();
+            fd.append('email', emailInput.value.trim());
+            for (let i = 0; i < fileInput.files.length; i++) {
+              fd.append('pdfs', fileInput.files[i]);
+            }
+
+            const headers = { 'Accept': 'application/json; charset=utf-8' };
+            if (bearerToken) headers['Authorization'] = `Bearer ${bearerToken}`;
+
+            response = await fetch('http://localhost:3000/upload', { 
+              method: 'POST', 
+              body: fd, 
+              headers 
+            });
+          } else {
+            // URL upload
+            const payload = {
+              email: emailInput.value.trim(),
+              url: urlInput.value.trim()
+            };
+
+            const headers = { 
+              'Content-Type': 'application/json',
+              'Accept': 'application/json; charset=utf-8' 
+            };
+            if (bearerToken) headers['Authorization'] = `Bearer ${bearerToken}`;
+
+            response = await fetch('http://localhost:3000/uploadURL', { 
+              method: 'POST', 
+              headers,
+              body: JSON.stringify(payload)
+            });
+          }
+
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          
+          // Success
+          const successText = currentMode === 'file' ? 'Documents uploaded successfully!' : 'URL submitted successfully!';
+          statusEl.textContent = successText;
+          statusEl.style.color = '#28a745';
           form.reset();
           chosen.innerHTML = '';
+          chosen.style.display = 'none';
+          clearUrlError();
+          
+          // Show success popup
+          const popupText = currentMode === 'file' ? 
+            'Success!\n\nYour documents have been uploaded successfully.' :
+            'Success!\n\nYour URL has been submitted successfully.';
+          alert(popupText);
+          
         } catch (err) {
-          statusEl.textContent = 'Upload failed: ' + err.message;
+          const errorText = currentMode === 'file' ? 'Upload failed: ' + err.message : 'URL submission failed: ' + err.message;
+          statusEl.textContent = errorText;
+          statusEl.style.color = '#dc3545';
+          
+          // Show error popup
+          const popupError = currentMode === 'file' ? 
+            'Upload Failed\n\nThere was an error uploading your documents. Please try again or contact the library for assistance.\n\nError: ' + err.message :
+            'Submission Failed\n\nThere was an error submitting your URL. Please try again or contact the library for assistance.\n\nError: ' + err.message;
+          alert(popupError);
+        } finally {
+          // Reset button state
+          submitBtn.disabled = false;
+          submitBtn.textContent = currentMode === 'file' ? 'Upload Documents' : 'Submit URL';
         }
       });
     })();

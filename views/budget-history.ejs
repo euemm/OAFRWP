@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= typeof pageTitle !== 'undefined' ? pageTitle : 'Budget History' %></title>
+  <link rel="icon" type="image/png" href="/public/brandeis.png">
+  <link rel="shortcut icon" type="image/png" href="/public/brandeis.png">
+  <style>
+    :root { --radius: 16px; --gap: 12px; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; background: #fff; color: #111; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; line-height: 1.45; }
+
+    /* --- HERO HEADER --- */
+    .hero { height: 180px; background: rgb(18,51,116) center/cover no-repeat; position: relative; display: flex; align-items: center; justify-content: center; }
+    /* .hero { height: 180px; background: url('<%= typeof headerBgUrl !== 'undefined' ? headerBgUrl : '/public/header.jpg' %>') center/cover no-repeat; position: relative; display: flex; align-items: center; justify-content: center; } */
+    .hero::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.28); }
+    .hero-inner { position: relative; z-index: 1; width: min(1200px, 100%); display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 20px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+    .hero h1 { margin: 0; font-size: 1.5rem; }
+    .budget-box { text-align: right; }
+    .budget-label { display:block; font-size: .9rem; opacity:.9; }
+    .budget-amount { font-size: 1.9rem; font-weight: 800; letter-spacing:.3px; }
+
+    /* --- LAYOUT --- */
+    .wrapper { min-height: calc(100vh - 180px); display: grid; padding: 24px; }
+    .card { background: #fff; border: 1px solid #eee; border-radius: var(--radius); box-shadow: 0 1px 6px rgba(0,0,0,.06); padding: 20px; }
+
+    header.section-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+    h2 { margin: 0; font-size: 1.2rem; }
+    .actions { display:flex; align-items:center; gap:8px; }
+    button, .btn { display:inline-flex; align-items:center; justify-content:center; padding:8px 12px; border:1px solid #ddd; background:#111; color:#fff; border-radius:999px; font-weight:700; cursor:pointer; }
+    button.ghost { background:#fff; color:#111; }
+
+    .status { font-weight:700; padding:4px 8px; border-radius:999px; border:1px solid #eee; }
+    .table-wrap { overflow:auto; border:1px solid #eee; border-radius:12px; }
+    table { width:100%; border-collapse:separate; border-spacing:0; min-width:600px; }
+    thead th { position:sticky; top:0; background:#fafafa; border-bottom:1px solid #eee; text-align:left; padding:10px; font-size:.9rem; }
+    tbody td { border-bottom:1px solid #f1f1f1; padding:10px; vertical-align:top; font-size:.95rem; }
+    tbody tr:hover { background:#fcfcfc; }
+    .nowrap { white-space:nowrap; }
+    .small { font-size:.85rem; color:#444; }
+  </style>
+</head>
+<body>
+  <!-- HERO HEADER WITH TOTAL BUDGET (TOP RIGHT) -->
+  <header class="hero">
+    <div class="hero-inner">
+      <h1>Brandeis Open Access Fund</h1>
+      <div class="budget-box">
+        <span class="budget-label">Total Budget</span>
+        <span id="totalBudget" class="budget-amount">—</span>
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3);">
+          <span class="budget-label">Running Total</span>
+          <span class="budget-amount" style="font-size: 1.4rem;" id="runningTotal">—</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrapper">
+    <section class="card" style="margin-bottom:14px;">
+      <header class="section-head">
+        <h2>Dashboard</h2>
+        <div class="actions">
+          <button class="ghost" id="refreshBtn">Refresh</button>
+          <button class="ghost" id="requestsBtn" type="button">Back to Requests</button>
+          <button class="ghost" id="filesBtn" type="button">Files</button>
+        </div>
+      </header>
+      <div id="status" class="small">Loading…</div>
+    </section>
+
+    <!-- BUDGET CONTROLS -->
+    <section class="card" style="margin-bottom:14px;">
+      <header class="section-head">
+        <h2>Budget Controls</h2>
+      </header>
+      <div style="display: flex; gap: 16px; align-items: end;">
+        <div>
+          <label for="changeBudgetInput" style="display: block; font-size: 0.9rem; margin-bottom: 4px; font-weight: 600;">Change Budget Amount:</label>
+          <input type="number" id="changeBudgetInput" placeholder="Enter amount (+ or -)" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; width: 180px;">
+          <button id="changeBudgetBtn" style="margin-left: 8px;">Change Budget</button>
+        </div>
+        <div>
+          <label for="setBudgetInput" style="display: block; font-size: 0.9rem; margin-bottom: 4px; font-weight: 600;">Set Budget Total:</label>
+          <input type="number" id="setBudgetInput" placeholder="Enter total amount" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; width: 180px;">
+          <button id="setBudgetBtn" style="margin-left: 8px;">Set Budget</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- BUDGET HISTORY VIEW -->
+    <section id="historySection" class="card">
+      <header class="section-head"><h2>Budget History</h2></header>
+      <div class="table-wrap">
+        <table aria-describedby="status">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Total Amount</th>
+              <th>Change</th>
+              <th>Running Total</th>
+              <th>Running Change</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // ---- Token cookie helper + fetch wrapper ----
+    function getTokenFromCookie() {
+      try {
+        return document.cookie
+          .split(';')
+          .map(s => s.trim())
+          .filter(Boolean)
+          .map(s => s.split('='))
+          .reduce((acc, [k,v]) => (acc[decodeURIComponent(k)] = decodeURIComponent(v || ''), acc), {})['token'] || '';
+      } catch (_) { return ''; }
+    }
+    (function wrapFetchForAuth(){
+      const origFetch = window.fetch.bind(window);
+      window.fetch = (input, init = {}) => {
+        const headers = new Headers((init && init.headers) || {});
+        if (!headers.has('Authorization')) {
+          const t = getTokenFromCookie();
+          if (t) headers.set('Authorization', 'Bearer ' + t);
+        }
+        if (!headers.has('Accept')) headers.set('Accept', 'application/json; charset=utf-8');
+        return origFetch(input, { ...init, headers });
+      };
+    })();
+
+    (function () {
+      const fetchBudgetUrl = "<%= typeof fetchBudgetUrl !== 'undefined' ? fetchBudgetUrl : 'http://localhost:3000/fetchBudget' %>";
+    //   const fetchBudgetUrl = "<%= typeof fetchBudgetUrl !== 'undefined' ? fetchBudgetUrl : 'https://oafund.library.brandeis.edu/fetchBudget' %>";
+
+      const statusEl = document.getElementById('status');
+      const refreshBtn = document.getElementById('refreshBtn');
+      const totalBudgetEl = document.getElementById('totalBudget');
+      const runningTotalEl = document.getElementById('runningTotal');
+      const historyBody = document.getElementById('historyBody');
+      const requestsBtn = document.getElementById('requestsBtn');
+      const filesBtn = document.getElementById('filesBtn');
+      const changeBudgetBtn = document.getElementById('changeBudgetBtn');
+      const setBudgetBtn = document.getElementById('setBudgetBtn');
+      const changeBudgetInput = document.getElementById('changeBudgetInput');
+      const setBudgetInput = document.getElementById('setBudgetInput');
+
+      // Navigate back to requests page
+      requestsBtn.addEventListener('click', () => {
+        window.location.href = '/requests';
+      });
+
+      // Navigate to files page
+      filesBtn.addEventListener('click', () => {
+        window.location.href = '/files-page';
+      });
+
+      // Change budget functionality
+      changeBudgetBtn.addEventListener('click', async () => {
+        const amount = changeBudgetInput.value.trim();
+        if (!amount || isNaN(amount)) {
+          alert('Please enter a valid number');
+          return;
+        }
+        await updateBudget('updateBudget', amount);
+        changeBudgetInput.value = '';
+      });
+
+      // Set budget functionality
+      setBudgetBtn.addEventListener('click', async () => {
+        const amount = setBudgetInput.value.trim();
+        if (!amount || isNaN(amount) || Number(amount) < 0) {
+          alert('Please enter a valid positive number');
+          return;
+        }
+        await updateBudget('setBudget', amount);
+        setBudgetInput.value = '';
+      });
+
+      refreshBtn.addEventListener('click', () => { loadBudget(); });
+
+      function fmtDate(iso) { try { return new Date(iso).toLocaleString(); } catch { return iso; } }
+      function money(n) { const num = Number(n); if (!isFinite(num)) return String(n); try { return new Intl.NumberFormat(undefined, { style:'currency', currency:'USD', maximumFractionDigits:0 }).format(num); } catch { return String(num); } }
+
+      async function updateBudget(action, amount) {
+        try {
+          statusEl.textContent = `${action === 'updateBudget' ? 'Changing' : 'Setting'} budget...`;
+          const url = `/${action}/${encodeURIComponent(amount)}`;
+          const method = action === 'setBudget' ? 'POST' : 'PUT';
+          const res = await fetch(url, { 
+            method: method, 
+            headers: { 'Accept': 'application/json; charset=utf-8' } 
+          });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          
+          statusEl.textContent = `Budget ${action === 'updateBudget' ? 'changed' : 'set'} successfully`;
+          // Refresh the budget data to show the updated values
+          loadBudget();
+        } catch (err) {
+          alert(`Failed to ${action === 'updateBudget' ? 'change' : 'set'} budget: ` + err.message);
+          statusEl.textContent = `Failed to ${action === 'updateBudget' ? 'change' : 'set'} budget`;
+        }
+      }
+
+      async function loadBudget() {
+        statusEl.textContent = 'Loading…';
+        try {
+          const res = await fetch(fetchBudgetUrl, { method: 'GET', headers: { 'Accept': 'application/json; charset=utf-8' } });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          let arr = Array.isArray(data) ? data : [];
+          if (arr.length) {
+            const last = arr[arr.length - 1];
+            const total = last && (Number(last['Total Amount']) || Number(last.total) || Number(last.amount));
+            const runningTotal = last && (Number(last['RunningTotal']) || Number(last.runningTotal) || 0);
+            totalBudgetEl.textContent = (total != null && isFinite(total)) ? money(total) : 'N/A';
+            runningTotalEl.textContent = (runningTotal != null && isFinite(runningTotal)) ? money(runningTotal) : 'N/A';
+            arr = arr.reverse()
+            renderHistory(arr);
+            statusEl.textContent = `Loaded ${arr.length} budget record(s).`;
+          } else { 
+            totalBudgetEl.textContent = 'N/A'; 
+            runningTotalEl.textContent = 'N/A';
+            renderHistory([]);
+            statusEl.textContent = 'No budget history found.';
+          }
+        } catch (e) { 
+          totalBudgetEl.textContent = 'N/A'; 
+          runningTotalEl.textContent = 'N/A';
+          renderHistory([]);
+          statusEl.textContent = 'Failed to load budget: ' + e.message;
+        }
+      }
+
+      function renderHistory(rows) {
+        historyBody.innerHTML = '';
+        if (!rows || !rows.length) { 
+          historyBody.innerHTML = '<tr><td colspan="6" class="small">No history.</td></tr>'; 
+          return; 
+        }
+        const frag = document.createDocumentFragment();
+        rows.forEach(r => {
+          const tr = document.createElement('tr');
+          const td1 = document.createElement('td'); td1.textContent = fmtDate(r['Timestamp'] || r.timestamp || '');
+          const td2 = document.createElement('td'); td2.textContent = money(r['Total Amount'] ?? r.total ?? r.amount ?? '');
+          const td3 = document.createElement('td'); td3.textContent = money(r['Change'] ?? r.change ?? 0);
+          const td4 = document.createElement('td'); td4.textContent = money(r['RunningTotal'] ?? r.runningTotal ?? 0);
+          const td5 = document.createElement('td'); td5.textContent = money(r['RunningTotalChange'] ?? r.runningTotalChange ?? 0);
+          const td6 = document.createElement('td'); td6.textContent = (r['Reason'] ?? r.reason ?? '') + '';
+          tr.append(td1, td2, td3, td4, td5, td6);
+          frag.appendChild(tr);
+        });
+        historyBody.appendChild(frag);
+      }
+
+      // initial load
+      loadBudget();
+    })();
+  </script>
+</body>
+</html>
