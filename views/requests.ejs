@@ -95,7 +95,7 @@
     tbody tr:hover { background:#fcfcfc; }
     .nowrap { white-space:nowrap; }
     .small { font-size:.85rem; color:#444; }
-    .actions-cell { min-width: 280px; }
+    .actions-cell { min-width: 0px; }
     
     /* Specific column widths for better readability */
     .col-timestamp { min-width: 110px; }
@@ -301,7 +301,7 @@
           'Timestamp': 'Timestamp',
           'Email Address': 'Email',
           'Title of Article / Chapter / Book': 'Title',
-          'Amount requested from open access fund': 'Amount',
+          'Amount requested': 'Amount',
           'Corresponding Author Name': 'Author',
           'Corresponding Author ORCiD': 'Author ORCiD',
           'Title of Journal': 'Journal',
@@ -330,10 +330,10 @@
         
         // UPDATE THIS TO REFLECT THE COLUMN ORDER
         const prefer = [
-          'Timestamp','Email Address','Title of Article / Chapter / Book','Amount requested from open access fund',
+          'Timestamp','Amount requested','OA fund status','Email Address','Title of Article / Chapter / Book',
           'Corresponding Author Name','Corresponding Author ORCiD','Title of Journal','Journal ISSN','Publisher',
           'Article Status','Publication Type','Collaborating Author List','Collaborating Author ORCiD List (Optional)',
-          'DOI (if applicable)','Comment to library publishing team','OA fund status'
+          'DOI (if applicable)','Comment to library publishing team'
         ];
         cols.sort((a,b)=>{ const ia = prefer.indexOf(a), ib = prefer.indexOf(b); if (ia === -1 && ib === -1) return a.localeCompare(b); if (ia === -1) return 1; if (ib === -1) return -1; return ia - ib; });
         
@@ -351,7 +351,7 @@
           if (c === 'Timestamp') colClass = 'col-timestamp';
           else if (c === 'Email Address') colClass = 'col-email';
           else if (c === 'Title of Article / Chapter / Book') colClass = 'col-title';
-          else if (c === 'Amount requested from open access fund') colClass = 'col-amount';
+          else if (c === 'Amount requested') colClass = 'col-amount';
           else if (c === 'Corresponding Author Name') colClass = 'col-author';
           else if (c === 'Corresponding Author ORCiD') colClass = 'col-orcid';
           else if (c === 'Title of Journal') colClass = 'col-journal';
@@ -368,12 +368,15 @@
           const displayTitle = columnTitles[c] || c;
           return `<th class="${(groupClass + ' ' + colClass).trim()}">${displayTitle}</th>`;
         }).join('');
-        thead.innerHTML = '<tr>' + headerCells + '<th class="nowrap">Actions</th>' + '</tr>';
+        thead.innerHTML = `<tr><th class="nowrap">Actions</th>` + headerCells + `</tr>`;
+        
 
         const frag = document.createDocumentFragment();
         rows.forEach((row) => {
           const tr = document.createElement('tr');
-          cols.forEach(col => {
+          
+          // Process columns in the preferred order
+          cols.forEach((col, index) => {
             const td = document.createElement('td');
             
             let val = row[col];
@@ -400,7 +403,7 @@
             if (col === 'Timestamp') colClass = 'col-timestamp';
             else if (col === 'Email Address') colClass = 'col-email';
             else if (col === 'Title of Article / Chapter / Book') colClass = 'col-title';
-            else if (col === 'Amount requested from open access fund') colClass = 'col-amount';
+            else if (col === 'Amount requested') colClass = 'col-amount';
             else if (col === 'Corresponding Author Name') colClass = 'col-author';
             else if (col === 'Corresponding Author ORCiD') colClass = 'col-orcid';
             else if (col === 'Title of Journal') colClass = 'col-journal';
@@ -418,13 +421,16 @@
             
             td.textContent = (val == null ? '' : String(val));
             tr.appendChild(td);
+            
+            // Insert Actions column after Timestamp (index 0)
+            if (index === 0) {
+              const tdAct = document.createElement('td');
+              tdAct.className = 'actions-cell';
+              tdAct.append(makeActionSelect(row));
+              tr.appendChild(tdAct);
+            }
           });
 
-          // Actions dropdown
-          const tdAct = document.createElement('td');
-          tdAct.className = 'actions-cell';
-          tdAct.append(makeActionSelect(row));
-          tr.appendChild(tdAct);
           frag.appendChild(tr);
         });
         tbody.innerHTML = '';

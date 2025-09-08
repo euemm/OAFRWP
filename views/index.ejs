@@ -359,7 +359,10 @@
     </div> -->
     <div class="header-main">
       <div class="container">
-        <a href="https://www.brandeis.edu" class="brandeis-logo">Brandeis University</a>
+        <a href="https://www.brandeis.edu" class="brandeis-logo">
+          <img src="/public/logo.svg" alt="Brandeis University" style="height: 40px; margin-right: 12px; vertical-align: middle;">
+          Library
+        </a>
         <nav class="header-nav">
           <ul>
             <li><a href="https://www.brandeis.edu/library/">Library</a></li>
@@ -415,7 +418,7 @@
         </label>
 
         <label>Author *
-          <input type="text" name="Author" placeholder="Primary author" required />
+          <input type="text" name="Author" placeholder="Corresponding author" required />
           <span class="error-message" id="author-error"></span>
         </label>
 
@@ -469,13 +472,14 @@
             <option value="review">Review</option>
             <option value="book-chapter">Book Chapter</option>
             <option value="conference-paper">Conference Paper</option>
+            <option value="book">Book</option>
             <option value="other">Other</option>
           </select>
           <span class="error-message" id="type-error"></span>
         </label>
 
-        <label>DOI * <span class="required-note">[Format: 10.xxxx/xxxxx]</span>
-          <input type="text" name="DOI" pattern="^10\.\d{4,}\/.*$" placeholder="10.1234/example.doi" required />
+        <label>DOI <span class="optional-note">[Optional - Format: 10.xxxx/xxxxx]</span>
+          <input type="text" name="DOI" pattern="^10\.\d{4,}\/.*$" placeholder="10.1234/example.doi" />
           <span class="error-message" id="doi-error"></span>
         </label>
 
@@ -680,12 +684,9 @@
           isValid = false;
         }
 
-        // DOI validation
+        // DOI validation (optional)
         const doiPattern = /^10\.\d{4,}\/.*$/;
-        if (!data.DOI) {
-          showError('DOI', 'DOI is required');
-          isValid = false;
-        } else if (!doiPattern.test(data.DOI)) {
+        if (data.DOI && !doiPattern.test(data.DOI)) {
           showError('DOI', 'DOI must start with 10. followed by publisher code and identifier');
           isValid = false;
         }
