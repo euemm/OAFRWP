@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Request Submitted - Brandeis University Open Access Fund</title>
+  <link rel="icon" type="image/png" href="/public/brandeis.png">
+  <link rel="shortcut icon" type="image/png" href="/public/brandeis.png">
+  <style>
+    :root { 
+      --radius: 16px; 
+      --gap: 12px; 
+      --brandeis-blue: #123374;
+      --brandeis-light-blue: #4a90e2;
+      --brandeis-gray: #666;
+      --brandeis-light-gray: #f8f9fa;
+      --success-green: #28a745;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: #fff;
+      color: #333;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* Brandeis Header */
+    .brandeis-header {
+      background: var(--brandeis-blue);
+      color: white;
+      padding: 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header-top {
+      background: #0f2a5f;
+      padding: 8px 0;
+      font-size: 0.85rem;
+    }
+    .header-top .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      text-align: right;
+    }
+    .header-top a {
+      color: #ccc;
+      text-decoration: none;
+      margin-left: 20px;
+    }
+    .header-top a:hover {
+      color: white;
+    }
+    .header-main {
+      padding: 15px 0;
+    }
+    .header-main .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brandeis-logo {
+      display: flex;
+      align-items: center;
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: white;
+      text-decoration: none;
+    }
+    .header-nav ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      gap: 30px;
+    }
+    .header-nav a {
+      color: white;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .header-nav a:hover {
+      color: #ccc;
+    }
+
+    /* Breadcrumb */
+    .breadcrumb {
+      background: var(--brandeis-light-gray);
+      padding: 12px 0;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .breadcrumb .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .breadcrumb-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    .breadcrumb-nav {
+      font-size: 0.9rem;
+      color: var(--brandeis-gray);
+    }
+    .breadcrumb-nav a {
+      color: var(--brandeis-blue);
+      text-decoration: none;
+    }
+    .breadcrumb-nav a:hover {
+      text-decoration: underline;
+    }
+    .page-nav-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .page-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      background: white;
+      color: var(--brandeis-blue);
+      text-decoration: none;
+      border-radius: 6px;
+      border: 1px solid #dee2e6;
+      font-weight: 500;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    .page-nav-btn:hover {
+      background: var(--brandeis-blue);
+      color: white;
+      border-color: var(--brandeis-blue);
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    }
+    .card {
+      width: min(820px, 100%);
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: var(--radius);
+      box-shadow: 0 4px 12px rgba(0,0,0,.08);
+      padding: 40px;
+      text-align: center;
+    }
+    .card h1 { 
+      margin: 0 0 8px; 
+      font-size: 2rem; 
+      color: var(--brandeis-blue);
+      font-weight: 300;
+    }
+    .card .subtitle {
+      margin: 0 0 30px;
+      color: var(--brandeis-gray);
+      font-size: 1.1rem;
+      font-weight: 300;
+    }
+
+    /* Success Icon */
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 30px;
+      background: var(--success-green);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      color: white;
+      font-weight: bold;
+    }
+
+    /* Success Message */
+    .success-message {
+      background: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      text-align: left;
+    }
+    .success-message h3 {
+      margin: 0 0 10px;
+      color: #155724;
+      font-size: 1.2rem;
+    }
+    .success-message p {
+      margin: 0 0 10px;
+    }
+    .success-message ul {
+      margin: 10px 0 0 20px;
+      padding: 0;
+    }
+    .success-message li {
+      margin-bottom: 5px;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-top: 30px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      min-width: 140px;
+      justify-content: center;
+    }
+    .btn-primary {
+      background: var(--brandeis-blue);
+      color: white;
+    }
+    .btn-primary:hover {
+      background: var(--brandeis-light-blue);
+    }
+    .btn-secondary {
+      background: white;
+      color: var(--brandeis-blue);
+      border: 2px solid var(--brandeis-blue);
+    }
+    .btn-secondary:hover {
+      background: var(--brandeis-blue);
+      color: white;
+    }
+
+    /* Footer */
+    .brandeis-footer {
+      background: var(--brandeis-blue);
+      color: white;
+      padding: 40px 0 20px;
+      margin-top: auto;
+    }
+    .footer-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .footer-main {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 40px;
+      margin-bottom: 30px;
+    }
+    .footer-section h3 {
+      margin: 0 0 15px;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .footer-section ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .footer-section ul li {
+      margin-bottom: 8px;
+    }
+    .footer-section a {
+      color: #ccc;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-section a:hover {
+      color: white;
+    }
+    .footer-bottom {
+      border-top: 1px solid #2a4a7f;
+      padding-top: 20px;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+    .footer-bottom p {
+      margin: 5px 0;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .header-main .container {
+        flex-direction: column;
+        gap: 15px;
+      }
+      .header-nav ul {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 15px;
+      }
+      .card {
+        padding: 30px 20px;
+      }
+      .footer-main {
+        grid-template-columns: 1fr;
+        gap: 25px;
+      }
+      .action-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+      .btn {
+        width: 100%;
+        max-width: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Brandeis Header -->
+  <header class="brandeis-header">
+    <div class="header-main">
+      <div class="container">
+        <a href="https://www.brandeis.edu" class="brandeis-logo">
+          <img src="/public/logo.svg" alt="Brandeis University" style="height: 40px; margin-right: 12px; vertical-align: middle;">
+          Library
+        </a>
+        <nav class="header-nav">
+          <ul>
+            <li><a href="https://www.brandeis.edu/library/">Library</a></li>
+            <li><a href="https://www.brandeis.edu/academics/">Academics</a></li>
+            <li><a href="https://www.brandeis.edu/research/">Research</a></li>
+            <li><a href="https://www.brandeis.edu/admissions/">Admissions</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb">
+    <div class="container">
+      <div class="breadcrumb-content">
+        <div class="breadcrumb-nav">
+          <a href="https://www.brandeis.edu">Home</a> > 
+          <a href="https://www.brandeis.edu/library/">Library</a> > 
+          <a href="/">Open Access Fund Request</a> > 
+          <span>Confirmation</span>
+        </div>
+        <div class="page-nav-buttons">
+          <a href="/upload" class="page-nav-btn">Upload Documents</a>
+          <a href="/login" class="page-nav-btn">Admin Login</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="card">
+      <div class="success-icon">✓</div>
+      <h1>Request Submitted Successfully!</h1>
+      <p class="subtitle">Your Open Access Fund request has been received</p>
+      
+      <div class="success-message">
+        <h3>What happens next?</h3>
+        <p>Thank you for submitting your Open Access Fund request. Here's what you can expect:</p>
+        <ul>
+          <li>You will receive a confirmation email shortly with your request details</li>
+          <li>Our library publishing team will review your request within 3-5 business days</li>
+          <li>You will be notified of the decision via email</li>
+          <li>If approved, funding will be processed according to your publication timeline</li>
+        </ul>
+        <p><strong>Request ID:</strong> <%= typeof requestId !== 'undefined' ? requestId : 'OA-' + Date.now() %></p>
+      </div>
+
+      <div class="action-buttons">
+        <a href="/" class="btn btn-primary">Submit Another Request</a>
+        <a href="https://www.brandeis.edu/library/" class="btn btn-secondary">Return to Library</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Brandeis Footer -->
+  <footer class="brandeis-footer">
+    <div class="footer-content">
+      <div class="footer-main">
+        <div class="footer-section">
+          <h3>Brandeis University</h3>
+          <ul>
+            <li><a href="https://www.brandeis.edu/about/">About Brandeis</a></li>
+            <li><a href="https://www.brandeis.edu/academics/">Academics</a></li>
+            <li><a href="https://www.brandeis.edu/admissions/">Admissions</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h3>Library Services</h3>
+          <ul>
+            <li><a href="https://www.brandeis.edu/library/">Library Home</a></li>
+            <li><a href="https://www.brandeis.edu/library/research/">Research Support</a></li>
+            <li><a href="https://www.brandeis.edu/library/services/">Services</a></li>
+            <li><a href="https://www.brandeis.edu/library/about/">About the Library</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h3>Resources</h3>
+          <ul>
+            <li><a href="https://search.library.brandeis.edu/">One Search</a></li>
+            <li><a href="https://guides.library.brandeis.edu/">Research Guides</a></li>
+            <li><a href="https://guides.library.brandeis.edu/az/databases">Databases A-Z</a></li>
+            <li><a href="https://search.library.brandeis.edu/">Journals A-Z</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h3>Contact Information</h3>
+          <ul>
+            <li>Goldfarb Library</li>
+            <li>415 South Street</li>
+            <li>Waltham, MA 02453</li>
+            <li><a href="mailto:library@brandeis.edu">librarypublishing@brandeis.edu</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; <%= new Date().getFullYear() %> Brandeis University. All rights reserved.
+          <a href="https://www.brandeis.edu/about/privacy.html">Privacy Policy</a> | 
+          <a href="https://www.brandeis.edu/about/accessibility-statement.html">Accessibility</a>
+        </p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

@@ -575,46 +575,57 @@ app.post('/register', async (req, res) => {
 //settings for sending emails
 import nodemailer from 'nodemailer'
 
-app.get('/test/email', (req, res) => {
-
-	const transporter = nodemailer.createTransport({
-		host: "127.0.0.1",
-		port: 25,
-		secure: false,
-		tls: { rejectUnauthorized: false },
-		name: "localhost"
-	})
-	
-	const from = "no-reply@oafund.library.brandeis.edu"
-	const to = "superjames19@brandeis.edu"
-	const subject = "Test Email"
-	const text = "This is a test email"
-	const html = "<p>This is a test email</p>"
-
-	new Promise(async (resolve, reject) => {
-
-		const info = await transport.sendMail({
-			from: from || "no-reply@example.com",
-			to,
-			subject,
-			text,
-			html
-		});
-			
-		if (info.messageId) {
-			resolve(info)
-		} else {
-			reject(info)
-		}
-
-	}).then(() => {
-		res.json({ ok: true, messageId: info.messageId });
-	}).catch((err) => {
-		res.json({ ok: false, messageId: err.messageId });
-	})
-
+const TRANSPORTER = nodemailer.createTransport({
+	host: "127.0.0.1",
+	port: 25,
+	secure: false,
+	tls: { rejectUnauthorized: false },
+	name: "localhost"
 })
 
+function sendEmail(to, subject, html, from) {
+
+	TRANSPORTER.sendMail({
+		from: from || "no-reply@oafund.library.brandeis.edu",
+		to: to || "librarypublishing@brandeis.edu",
+		subject: subject || "Test Email",
+		html: html || "<p>This is a test email</p>"
+	})
+
+}
+
+// Function to send confirmation email with HTML template
+async function sendConfirmationEmail(recipientEmail, requestId = null) {
+	try {
+		// Generate request ID if not provided
+		const finalRequestId = requestId || 'OA-' + Date.now()
+		
+		// Render the confirmation EJS template
+		const confirmationHtml = await new Promise((resolve, reject) => {
+			app.render('confirmation', { 
+				requestId: finalRequestId,
+				pageTitle: 'Request Submitted - Brandeis University Open Access Fund'
+			}, (err, html) => {
+				if (err) reject(err)
+				else resolve(html)
+			})
+		})
+
+		// Send the email
+		await TRANSPORTER.sendMail({
+			from: "no-reply@oafund.library.brandeis.edu",
+			to: recipientEmail,
+			subject: "Open Access Fund Request Submitted Successfully",
+			html: confirmationHtml
+		})
+
+		console.log(`Confirmation email sent successfully to ${recipientEmail}`)
+		return { success: true, requestId: finalRequestId }
+	} catch (error) {
+		console.error('Error sending confirmation email:', error)
+		return { success: false, error: error.message }
+	}
+}
 
 function backupBudget() {
 
@@ -1513,6 +1524,44 @@ app.get('/fetchBudget', auth, (req, res) => {
 
 	})
 
+})
+
+app.get('/test/email', (req, res) => {
+
+	sendEmail(
+		"superjames19@brandeis.edu", 
+		"Test Email", 
+		"<p>This is a test email</p>",
+		"no-reply@oafund.library.brandeis.edu"
+	)
+
+})
+
+// Test endpoint for confirmation email
+app.get('/test/confirmation-email', async (req, res) => {
+	const recipientEmail = req.query.email || "superjames19@brandeis.edu"
+	const requestId = req.query.requestId || null
+	
+	try {
+		const result = await sendConfirmationEmail(recipientEmail, requestId)
+		if (result.success) {
+			res.json({ 
+				message: 'Confirmation email sent successfully', 
+				requestId: result.requestId,
+				recipient: recipientEmail
+			})
+		} else {
+			res.status(500).json({ 
+				error: 'Failed to send confirmation email', 
+				details: result.error 
+			})
+		}
+	} catch (error) {
+		res.status(500).json({ 
+			error: 'Failed to send confirmation email', 
+			details: error.message 
+		})
+	}
 })
 
 app.listen(port, () => {
