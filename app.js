@@ -51,8 +51,8 @@ app.use(cookieParser())
 //Settings for apache
 app.set('trust proxy', 1); // if exactly one proxy (Apache) is in front
 
-// const LOCAL = 'https://oafund.library.brandeis.edu'
-const LOCAL = 'http://localhost:3000'
+const LOCAL = 'https://oafund.library.brandeis.edu'
+//const LOCAL = 'http://localhost:3000'
 
 //MULTER storage settings like default naming
 const storage = multer.diskStorage({
