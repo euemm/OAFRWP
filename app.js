@@ -586,25 +586,21 @@ const TRANSPORTER = nodemailer.createTransport({
 function sendEmail(to, subject, html, from) {
 
 	TRANSPORTER.sendMail({
-		from: from || "no-reply@oafund.library.brandeis.edu",
+		from: from || "no-reply@library.brandeis.edu",
 		to: to || "librarypublishing@brandeis.edu",
-		subject: subject || "Test Email",
-		html: html || "<p>This is a test email</p>"
+		subject: subject || "Update on Brandeis University Open Access Fund",
+		html: html || "<p>There has been an update to your Open Access Fund request.</p>"
 	})
 
 }
 
 // Function to send confirmation email with HTML template
-async function sendConfirmationEmail(recipientEmail, requestId = null) {
+async function sendConfirmationEmail(recipientEmail) {
 
 	try {
-		// Generate request ID if not provided
-		const finalRequestId = requestId || 'OA-' + new Date().toISOString()
-		
 		// Render the confirmation EJS template
 		const confirmationHtml = await new Promise((resolve, reject) => {
 			app.render('confirmation', { 
-				requestId: finalRequestId,
 				pageTitle: 'Request Submitted - Brandeis University Open Access Fund'
 			}, (err, html) => {
 				if (err) reject(err)
@@ -614,22 +610,22 @@ async function sendConfirmationEmail(recipientEmail, requestId = null) {
 
 		// Send the email
 		await TRANSPORTER.sendMail({
-			from: "no-reply@oafund.library.brandeis.edu",
+			from: "no-reply@library.brandeis.edu",
 			to: recipientEmail,
 			subject: "Open Access Fund Request Submitted Successfully",
 			html: confirmationHtml
 		})
 
-		console.log(`Confirmation email sent successfully to ${recipientEmail}`)
-		return { success: true, requestId: finalRequestId }
+		// console.log(`Confirmation email sent successfully to ${recipientEmail}`)
+		return { success: true }
 	} catch (error) {
-		console.error('Error sending confirmation email:', error)
+		// console.error('Error sending confirmation email:', error)
 		return { success: false, error: error.message }
 	}
 }
 
 // Function to send application update email
-async function sendApplicationUpdateEmail(recipientEmail, requestId, status, additionalInfo = {}) {
+async function sendApplicationUpdateEmail(recipientEmail, status, additionalInfo = {}) {
 	try {
 		// Status configuration
 		const statusConfig = {
@@ -648,15 +644,14 @@ async function sendApplicationUpdateEmail(recipientEmail, requestId, status, add
 			},
 			'DENIED': {
 				subject: "Open Access Fund Request Update",
-				message: "Your request requires additional information.",
-				description: "After reviewing your Open Access Fund request, we need some additional information before we can proceed.",
+				message: "Your request has been denied.",
+				description: "After reviewing your Open Access Fund request, we have decided to deny your request.",
 				icon: "!",
 				class: "denied",
 				nextSteps: [
-					"Please review the feedback provided below",
-					"Submit the requested information or documentation",
-					"Contact us if you have any questions about the requirements",
-					"You may resubmit your request once the issues are addressed"
+					"Contact us if you have any questions about the decision",
+					"You may resubmit your request once the issues are addressed",	
+					"Thank you for your patience"
 				]
 			},
 			'PAID': {
@@ -695,7 +690,7 @@ async function sendApplicationUpdateEmail(recipientEmail, requestId, status, add
 					"No further action is required on your part",
 					"You may submit a new request in the future if needed",
 					"Contact us if you have any questions about this cancellation",
-					"Thank you for using the Open Access Fund service"
+					"Sorry for the inconvenience"
 				]
 			}
 		}
@@ -723,7 +718,6 @@ async function sendApplicationUpdateEmail(recipientEmail, requestId, status, add
 				statusDescription: config.description,
 				statusIcon: config.icon,
 				statusClass: config.class,
-				requestId: requestId,
 				status: status,
 				additionalInfo: additionalInfo,
 				nextSteps: config.nextSteps
@@ -741,7 +735,7 @@ async function sendApplicationUpdateEmail(recipientEmail, requestId, status, add
 			html: updateHtml
 		})
 
-		console.log(`Application update email sent successfully to ${recipientEmail} for request ${requestId} with status ${status}`)
+		console.log(`Application update email sent successfully to ${recipientEmail} with status ${status}`)
 		return { success: true, status: status }
 	} catch (error) {
 		console.error('Error sending application update email:', error)
@@ -778,6 +772,8 @@ function revertFile() {
 function changeRequestStatus(timestamp, status) {
 
 	let amount
+	let email
+	let title
 
 	return new Promise((resolve, reject) => {
 
@@ -802,12 +798,48 @@ function changeRequestStatus(timestamp, status) {
 
 				if (file[i][0] === timestamp) {
 
-					if (status == APPROVED && file[i][15] === SUBMITTED) { file[i][15] = APPROVED; edit = true; amount = file[i][3] }
-					if (status == DENIED && file[i][15] === SUBMITTED) { file[i][15] = DENIED; edit = true; amount = file[i][3] }
-					if (status == PAID && file[i][15] === APPROVED) { file[i][15] = PAID; edit = true; amount = file[i][3] }
-					if (status == PAID && file[i][15] === PAYMENT_PLANNED) { file[i][15] = PAID; edit = true; amount = file[i][3] }
-					if (status == CANCELLED && file[i][15] === APPROVED) { file[i][15] = CANCELLED; edit = true; amount = file[i][3] }
-					if (status == PAYMENT_PLANNED && file[i][15] === APPROVED) { file[i][15] = PAYMENT_PLANNED; edit = true; amount = file[i][3] }
+			if (status == APPROVED && file[i][15] === SUBMITTED) { 
+				file[i][15] = APPROVED; 
+				edit = true; 
+				amount = file[i][3]
+				email = file[i][1]
+				title = file[i][2]
+			}
+			if (status == DENIED && file[i][15] === SUBMITTED) { 
+				file[i][15] = DENIED; 
+				edit = true; 
+				amount = file[i][3]
+				email = file[i][1]
+				title = file[i][2]
+			}
+			if (status == PAID && file[i][15] === APPROVED) { 
+				file[i][15] = PAID; 
+				edit = true; 
+				amount = file[i][3]
+				email = file[i][1]
+				title = file[i][2]
+			}
+			if (status == PAID && file[i][15] === PAYMENT_PLANNED) { 
+				file[i][15] = PAID; 
+				edit = true; 
+				amount = file[i][3]
+				email = file[i][1]
+				title = file[i][2]
+			}
+			if (status == CANCELLED && file[i][15] === APPROVED) { 
+				file[i][15] = CANCELLED; 
+				edit = true; 
+				amount = file[i][3]
+				email = file[i][1]
+				title = file[i][2]
+			}
+			if (status == PAYMENT_PLANNED && file[i][15] === APPROVED) { 
+				file[i][15] = PAYMENT_PLANNED; 
+				edit = true; 
+				amount = file[i][3]
+				email = file[i][1]
+				title = file[i][2]
+			}
 
 					break; // Found the record, exit loop
 
@@ -830,7 +862,7 @@ function changeRequestStatus(timestamp, status) {
 
 					if (err) { reject('500 error writing file') }
 
-					else { resolve(amount) }
+					else { resolve({ amount, email, title }) }
 
 				})
 
@@ -964,10 +996,10 @@ app.put('/cancel/:timestamp', auth, (req, res) => {
 		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject(); return; }
 
 		try {
-			const amount = await changeRequestStatus(timestamp, CANCELLED)
+			const result = await changeRequestStatus(timestamp, CANCELLED)
 
-			if (amount) {
-				resolve({ amount: Number(amount), timestamp })
+			if (result) {
+				resolve({ amount: Number(result.amount), timestamp:timestamp, email: result.email, title: result.title })
 			} else {
 				reject()
 			}
@@ -985,6 +1017,15 @@ app.put('/cancel/:timestamp', auth, (req, res) => {
 			
 			if (result) {
 				res.status(200).send(200)
+
+				const additionalInfo = {
+					timestamp: data.timestamp,
+					title: data.title,
+					amount: data.amount
+				}
+				
+				sendApplicationUpdateEmail(data.email, CANCELLED, additionalInfo)
+
 			} else {
 				revertBudget()
 				res.status(400).send(400)
@@ -1023,7 +1064,7 @@ app.put('/deny/:timestamp', auth, (req, res) => {
 			const result = await changeRequestStatus(timestamp, DENIED)
 
 			if(result) {
-				resolve()
+				resolve({ amount: Number(result.amount), timestamp: timestamp, email: result.email, title: result.title })
 			} else {
 				reject()
 			}
@@ -1035,6 +1076,14 @@ app.put('/deny/:timestamp', auth, (req, res) => {
 	}).then(() => {
 
 		res.status(200).send(200)
+
+		const additionalInfo = {
+			timestamp: data.timestamp,
+			title: data.title,
+			amount: data.amount
+		}
+		
+		sendApplicationUpdateEmail(data.email, DENIED, additionalInfo)
 
 	}, () => {
 
@@ -1060,7 +1109,7 @@ app.put('/planned/:timestamp', auth, (req, res) => {
 			const result = await changeRequestStatus(timestamp, PAYMENT_PLANNED)
 
 			if(result) {
-				resolve()
+				resolve({ amount: Number(result.amount), timestamp: timestamp, email: result.email, title: result.title })
 			} else {
 				reject()
 			}
@@ -1072,6 +1121,15 @@ app.put('/planned/:timestamp', auth, (req, res) => {
 	}).then(() => {
 
 		res.status(200).send(200)
+
+		const additionalInfo = {
+			timestamp: data.timestamp,
+			title: data.title,
+			amount: data.amount
+		}
+		
+		sendApplicationUpdateEmail(data.email, PAYMENT_PLANNED, additionalInfo)
+
 
 	}, () => {
 
@@ -1097,10 +1155,10 @@ app.put('/paid/:timestamp', auth, (req, res) => {
 		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject(); return; }
 
 		try {
-			const amount = await changeRequestStatus(timestamp, PAID)
+			const result = await changeRequestStatus(timestamp, PAID)
 
-			if(amount) {
-				resolve({ amount: Number(amount), timestamp })
+			if(result) {
+				resolve({ amount: Number(result.amount), timestamp: timestamp, email: result.email, title: result.title })
 			} else {
 				reject()
 			}
@@ -1118,7 +1176,17 @@ app.put('/paid/:timestamp', auth, (req, res) => {
 			const running = await changeRunningTotal(-Number(data.amount), `${data.timestamp} ${PAID}`)
 
 			if(result && running) {
+
 				res.status(200).send(200)
+
+				const additionalInfo = {
+					timestamp: data.timestamp,
+					title: data.title,
+					amount: data.amount
+				}
+				
+				sendApplicationUpdateEmail(data.email, PAID, additionalInfo)
+
 			} else {
 				revertBudget()
 				res.status(400).send(400)
@@ -1153,13 +1221,14 @@ app.put('/approve/:timestamp', auth, (req, res) => {
 		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject(); return; }
 
 		try {
-			const amount = await changeRequestStatus(timestamp, APPROVED)
+			const result = await changeRequestStatus(timestamp, APPROVED)
 
-			if (amount) {
-				resolve({ amount, timestamp })
+			if (result) {
+				resolve({ amount: Number(result.amount), timestamp: timestamp, email: result.email, title: result.title })
 			} else {
 				reject()
 			}
+			
 		} catch (error) {
 			console.log('Error changing request status to APPROVED:', error)
 			reject()
@@ -1170,18 +1239,33 @@ app.put('/approve/:timestamp', auth, (req, res) => {
 		backupBudget()
 
 		try {
+
 			const result = await changeRunningTotal(data.amount, `${data.timestamp} ${APPROVED}`)
 			
 			if (result) {
+
 				res.status(200).send(200)
+
+				const additionalInfo = {
+					timestamp: data.timestamp,
+					title: data.title,
+					amount: data.amount
+				}
+				
+				sendApplicationUpdateEmail(data.email, APPROVED, additionalInfo)
+
 			} else {
+
 				revertBudget()
 				res.status(400).send(400)
 			}
+
 		} catch (error) {
+
 			console.log('Error updating running total:', error)
 			revertBudget()
 			res.status(400).send(400)
+
 		}
 
 	}, () => {
@@ -1313,131 +1397,131 @@ app.post('/setBudget/:amount', auth, (req, res) => {
 // /update/2025-10-29-04-55-30?email=nobody@brandeis.edu
 // /update/2025-10-29-04-55-30?amount=1&OAstatus=approved
 //timestamp param is mandatory other queries are optional
-app.put('/update/:timestamp', auth, (req, res) => {
+// app.put('/update/:timestamp', auth, (req, res) => {
 
-	new Promise((resolve, reject) => {
+// 	new Promise((resolve, reject) => {
 
-		backupFile()
+// 		backupFile()
 
-		let timestamp = undefined
+// 		let timestamp = undefined
 
-		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject() }
+// 		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject() }
 
-		fs.readFile(`${__dirname}/${__filename}`, 'utf8', (err, data) => {
+// 		fs.readFile(`${__dirname}/${__filename}`, 'utf8', (err, data) => {
 
-			if (err) { reject('asdf') }
+// 			if (err) { reject('asdf') }
 
-			let lines = data.split(os.EOL)
-			let file = []
+// 			let lines = data.split(os.EOL)
+// 			let file = []
 
-			for (const i of lines) {
-				file.push(i.split(","))
-			}
+// 			for (const i of lines) {
+// 				file.push(i.split(","))
+// 			}
 
-			let edit = false
+// 			let edit = false
 
-			for (let i = 1; i < file.length; i++) {
+// 			for (let i = 1; i < file.length; i++) {
 
-				if (file[i][0] === timestamp) {
+// 				if (file[i][0] === timestamp) {
 
-					edit = true
+// 					edit = true
 
-					let email
-					let title
-					let amount
-					let author
-					let authorORCiD
-					let collab
-					let collabORCiD
-					let journal
-					let journalISSN 
-					let publisher
-					let status
-					let type 
-					let DOI
-					let comment
-					let OAstatus
+// 					let email
+// 					let title
+// 					let amount
+// 					let author
+// 					let authorORCiD
+// 					let collab
+// 					let collabORCiD
+// 					let journal
+// 					let journalISSN 
+// 					let publisher
+// 					let status
+// 					let type 
+// 					let DOI
+// 					let comment
+// 					let OAstatus
 
-					if (req.query.email) { email = req.query.email.replace(",", ".") } else { email = file[i][1] }
-					if (req.query.title) { title = req.query.title.replace(",", ".") } else { title = file[i][2] }
-					if (req.query.amount) { amount = req.query.amount.replace(",", ".") } else { amount = file[i][3] }
-					if (req.query.author) { author = req.query.author.replace(",", ".") } else { author = file[i][4] }
-					if (req.query.authorORCiD) { authorORCiD = req.query.authorORCiD.replace(",", ".") } else { authorORCiD = file[i][5] }
-					if (req.query.collab) { collab = req.query.collab.replace(",", ".") } else { collab = file[i][6] }
-					if (req.query.collabORCiD) { collabORCiD = req.query.collabORCiD.replace(",", ".") } else { collabORCiD = file[i][7] }
-					if (req.query.journal) { journal = req.query.journal.replace(",", ".") } else { journal = file[i][8] }
-					if (req.query.journalISSN) { journalISSN = req.query.journalISSN.replace(",", ".") } else { journalISSN = file[i][9] }
-					if (req.query.publisher) { publisher = req.query.publisher.replace(",", ".") } else { publisher = file[i][10] }
-					if (req.query.status) { status = req.query.status.replace(",", ".") } else { status = file[i][11] }
-					if (req.query.type) { type = req.query.type.replace(",", ".") } else { type = file[i][12] }
-					if (req.query.DOI) { DOI = req.query.DOI.replace(",", ".") } else { DOI = file[i][13] }
-					if (req.query.comment) { comment = req.query.comment.replace(",", ".") } else { comment = file[i][14] }
-					if (req.query.OAstatus) { OAstatus = req.query.OAstatus.replace(",", ".") } else { OAstatus = file[i][15] }
+// 					if (req.query.email) { email = req.query.email.replace(",", ".") } else { email = file[i][1] }
+// 					if (req.query.title) { title = req.query.title.replace(",", ".") } else { title = file[i][2] }
+// 					if (req.query.amount) { amount = req.query.amount.replace(",", ".") } else { amount = file[i][3] }
+// 					if (req.query.author) { author = req.query.author.replace(",", ".") } else { author = file[i][4] }
+// 					if (req.query.authorORCiD) { authorORCiD = req.query.authorORCiD.replace(",", ".") } else { authorORCiD = file[i][5] }
+// 					if (req.query.collab) { collab = req.query.collab.replace(",", ".") } else { collab = file[i][6] }
+// 					if (req.query.collabORCiD) { collabORCiD = req.query.collabORCiD.replace(",", ".") } else { collabORCiD = file[i][7] }
+// 					if (req.query.journal) { journal = req.query.journal.replace(",", ".") } else { journal = file[i][8] }
+// 					if (req.query.journalISSN) { journalISSN = req.query.journalISSN.replace(",", ".") } else { journalISSN = file[i][9] }
+// 					if (req.query.publisher) { publisher = req.query.publisher.replace(",", ".") } else { publisher = file[i][10] }
+// 					if (req.query.status) { status = req.query.status.replace(",", ".") } else { status = file[i][11] }
+// 					if (req.query.type) { type = req.query.type.replace(",", ".") } else { type = file[i][12] }
+// 					if (req.query.DOI) { DOI = req.query.DOI.replace(",", ".") } else { DOI = file[i][13] }
+// 					if (req.query.comment) { comment = req.query.comment.replace(",", ".") } else { comment = file[i][14] }
+// 					if (req.query.OAstatus) { OAstatus = req.query.OAstatus.replace(",", ".") } else { OAstatus = file[i][15] }
 
-					file[i] = [
-						timestamp,
-						email,
-						title,
-						amount,
-						author,
-						authorORCiD,
-						collab,
-						collabORCiD,
-						journal,
-						journalISSN,
-						publisher,
-						status,
-						type,
-						DOI,
-						comment,
-						OAstatus
-					]
+// 					file[i] = [
+// 						timestamp,
+// 						email,
+// 						title,
+// 						amount,
+// 						author,
+// 						authorORCiD,
+// 						collab,
+// 						collabORCiD,
+// 						journal,
+// 						journalISSN,
+// 						publisher,
+// 						status,
+// 						type,
+// 						DOI,
+// 						comment,
+// 						OAstatus
+// 					]
 
-				}
+// 				}
 
-			}
+// 			}
 
-			if (edit) {
+// 			if (edit) {
 
-				let output = []
+// 				let output = []
 
-				for (const i of file) {
+// 				for (const i of file) {
 
-					output.push(i.join(","))
+// 					output.push(i.join(","))
 
-				}
+// 				}
 
-				fs.writeFile(`${__dirname}/${__filename}`, output.join(os.EOL), (err) => {
+// 				fs.writeFile(`${__dirname}/${__filename}`, output.join(os.EOL), (err) => {
 
-					if (err) { reject() }
+// 					if (err) { reject() }
 
-					resolve()
+// 					resolve()
 
-				})
+// 				})
 
-			} else {
+// 			} else {
 
-				reject()
+// 				reject()
 
-			}
+// 			}
 
-		})
+// 		})
 
-	}).then(() => {	//ON RESOLVE
+// 	}).then(() => {	//ON RESOLVE
 
-		res.status(200).send(200)
+// 		res.status(200).send(200)
 
-	}, () => {	//ON REJECT
+// 	}, () => {	//ON REJECT
 
-		revertFile()
+// 		revertFile()
 
-		// console.log(err)
+// 		// console.log(err)
 
-		res.status(400).send(400)
+// 		res.status(400).send(400)
 
-	})
+// 	})
 
-})
+// })
 
 //Create new line
 //query goes like 
@@ -1517,13 +1601,31 @@ app.post('/create', (req, res) => {
 
 				if (err) { reject(err) }
 
-				else { resolve() }
+				else { resolve(email) }
 
 		})
 
-	}).then(() => {
+	}).then((email) => {
 
 		res.status(200).send(200)
+
+		sendConfirmationEmail(email)
+
+		// Send notification email to library team about new request
+		sendEmail(
+			"librarypublishing@brandeis.edu",
+			"New Open Access Fund Request Submitted",
+			`<p>A new Open Access Fund request has been submitted by ${email}.</p>
+			<p>Please review the request in the admin panel.</p>
+			<p>Request details:</p>
+			<ul>
+				<li><strong>Email:</strong> ${email}</li>
+				<li><strong>Title:</strong> ${req.query.title || 'Not provided'}</li>
+				<li><strong>Amount:</strong> $${req.query.amount || 'Not provided'}</li>
+				<li><strong>Author:</strong> ${req.query.author || 'Not provided'}</li>
+				<li><strong>Journal:</strong> ${req.query.journal || 'Not provided'}</li>
+			</ul>`
+		)
 
 	}, () => {
 
@@ -1689,38 +1791,38 @@ app.get('/fetchBudget', auth, (req, res) => {
 // })
 
 // Test endpoint for application update email
-app.get('/test/update-email', async (req, res) => {
-	const recipientEmail = req.query.email || "superjames19@brandeis.edu"
-	const requestId = req.query.requestId || "OA-TEST-12345"
-	const status = req.query.status || "DENIED"
-	const additionalInfo = {
-		title: req.query.title || "Sample Research Article",
-		amount: req.query.amount || "1500.00",
-		feedback: req.query.feedback || null
-	}
+// app.get('/test/update-email', async (req, res) => {
+// 	const recipientEmail = req.query.email || "superjames19@brandeis.edu"
+// 	const requestId = req.query.requestId || "OA-TEST-12345"
+// 	const status = req.query.status || "DENIED"
+// 	const additionalInfo = {
+// 		title: req.query.title || "Sample Research Article",
+// 		amount: req.query.amount || "1500.00",
+// 		feedback: req.query.feedback || null
+// 	}
 	
-	try {
-		const result = await sendApplicationUpdateEmail(recipientEmail, requestId, status, additionalInfo)
-		if (result.success) {
-			res.json({ 
-				message: 'Application update email sent successfully', 
-				requestId: requestId,
-				status: status,
-				recipient: recipientEmail
-			})
-		} else {
-			res.status(500).json({ 
-				error: 'Failed to send application update email', 
-				details: result.error 
-			})
-		}
-	} catch (error) {
-		res.status(500).json({ 
-			error: 'Failed to send application update email', 
-			details: error.message 
-		})
-	}
-})
+// 	try {
+// 		const result = await sendApplicationUpdateEmail(recipientEmail, requestId, status, additionalInfo)
+// 		if (result.success) {
+// 			res.json({ 
+// 				message: 'Application update email sent successfully', 
+// 				requestId: requestId,
+// 				status: status,
+// 				recipient: recipientEmail
+// 			})
+// 		} else {
+// 			res.status(500).json({ 
+// 				error: 'Failed to send application update email', 
+// 				details: result.error 
+// 			})
+// 		}
+// 	} catch (error) {
+// 		res.status(500).json({ 
+// 			error: 'Failed to send application update email', 
+// 			details: error.message 
+// 		})
+// 	}
+// })
 
 app.listen(port, () => {
 

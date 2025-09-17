@@ -207,9 +207,8 @@
       
       <div class="request-info">
         <h3>Request Details</h3>
-        <p><strong>Request ID:</strong> <%= requestId %></p>
         <p><strong>Status:</strong> <%= status %></p>
-        <p><strong>Date:</strong> <%= new Date().toLocaleDateString() %></p>
+        <p><strong>Date:</strong> <%= additionalInfo.timestamp %></p>
         <% if (additionalInfo.title) { %>
           <p><strong>Title:</strong> <%= additionalInfo.title %></p>
         <% } %>
@@ -217,13 +216,6 @@
           <p><strong>Amount:</strong> $<%= additionalInfo.amount %></p>
         <% } %>
       </div>
-      
-      <% if (additionalInfo.feedback) { %>
-      <div class="next-steps">
-        <h3>Additional Information</h3>
-        <p><%= additionalInfo.feedback %></p>
-      </div>
-      <% } %>
       
       <div class="next-steps">
         <h3>Next Steps</h3>
