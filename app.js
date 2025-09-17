@@ -908,7 +908,7 @@ function changeBudgetTotal(amount, reason) {
 				amount,
 				reason,
 				file[file.length-1][4],
-				file[file.length-1][5]
+				0
 			]
 
 			fs.appendFile(path.join(__dirname, __budgetFileName), input.join(",") + os.EOL, (err) => {
@@ -952,7 +952,7 @@ function changeRunningTotal(amount, reason) {
 			let input = [
 				timestamp,
 				file[file.length-1][1],
-				file[file.length-1][2],
+				0,
 				reason,
 				Number(Number(file[file.length-1][4]) + Number(amount)),
 				amount
@@ -1073,7 +1073,7 @@ app.put('/deny/:timestamp', auth, (req, res) => {
 			reject()
 		}
 
-	}).then(() => {
+	}).then((data) => {
 
 		res.status(200).send(200)
 
@@ -1118,7 +1118,7 @@ app.put('/planned/:timestamp', auth, (req, res) => {
 			reject()
 		}
 
-	}).then(() => {
+	}).then((data) => {
 
 		res.status(200).send(200)
 
