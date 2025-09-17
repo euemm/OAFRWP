@@ -21,7 +21,7 @@ const port = 3000
 import fs, { stat } from 'fs'
 import { parse } from 'csv-parse'
 const __dirname = new URL(".", import.meta.url).pathname
-const __filename = 'empty.csv'
+const __filename = 'requests.csv'
 const __budgetFileName = 'budget.csv'
 const __urlsFileName = 'urls.csv'
 import os from 'os'
@@ -639,7 +639,7 @@ async function sendApplicationUpdateEmail(recipientEmail, status, additionalInfo
 					"Funding will be processed according to your publication timeline",
 					"You will receive payment details via email within 2-3 business days",
 					"Please proceed with your publication as planned",
-					"Keep all receipts and documentation for your records"
+					"Upload all receipts and documentation of your publication for your payment"
 				]
 			},
 			'DENIED': {
@@ -649,7 +649,7 @@ async function sendApplicationUpdateEmail(recipientEmail, status, additionalInfo
 				icon: "!",
 				class: "denied",
 				nextSteps: [
-					"Contact us if you have any questions about the decision",
+					"Contact [librarypublishing@brandeis.edu] if you have any questions about the decision",
 					"You may resubmit your request once the issues are addressed",	
 					"Thank you for your patience"
 				]
@@ -663,8 +663,8 @@ async function sendApplicationUpdateEmail(recipientEmail, status, additionalInfo
 				nextSteps: [
 					"Your publication should now be available as open access",
 					"Please verify the open access status with your publisher",
-					"Keep all payment confirmations for your records",
-					"Contact us if you have any issues with the publication"
+					"Keep all payment confirmations of your publication for your records",
+					"Contact [librarypublishing@brandeis.edu] if you have any issues with the publication"
 				]
 			},
 			'PAYMENT_PLANNED': {
@@ -677,7 +677,7 @@ async function sendApplicationUpdateEmail(recipientEmail, status, additionalInfo
 					"Payment will be processed within 5-7 business days",
 					"You will receive a confirmation once payment is sent",
 					"Please coordinate with your publisher regarding timing",
-					"Contact us if you need to adjust the payment schedule"
+					"Contact [librarypublishing@brandeis.edu] if you need to adjust the payment schedule"
 				]
 			},
 			'CANCELLED': {
@@ -689,7 +689,7 @@ async function sendApplicationUpdateEmail(recipientEmail, status, additionalInfo
 				nextSteps: [
 					"No further action is required on your part",
 					"You may submit a new request in the future if needed",
-					"Contact us if you have any questions about this cancellation",
+					"Contact [librarypublishing@brandeis.edu] if you have any questions about this cancellation",
 					"Sorry for the inconvenience"
 				]
 			}
