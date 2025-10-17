@@ -153,10 +153,11 @@ app.use('/files', auth, filesRouter)
 
 
 //web view for the request form
-app.get('/', (req, res) => {
+app.get('/', extractSSOAttributes, (req, res) => {
 
 	res.render('index', {
-		endPoint : LOCAL
+		endPoint : LOCAL,
+		user: req.ssoUser || null
 	})
 
 })
@@ -479,6 +480,39 @@ function verifyToken(token, secret) {
 
 	}
 
+}
+
+//middleware that extracts SSO attributes from request headers
+function extractSSOAttributes(req, res, next) {
+	// Extract SSO attributes from headers (these are typically set by Apache mod_shib)
+	const ssoAttributes = {
+		affiliation: req.get('affiliation') || req.get('HTTP_AFFILIATION'),
+		cn: req.get('cn') || req.get('HTTP_CN'),
+		displayName: req.get('displayName') || req.get('HTTP_DISPLAYNAME'),
+		eppn: req.get('eppn') || req.get('HTTP_EPPN'),
+		givenName: req.get('givenName') || req.get('HTTP_GIVENNAME'),
+		mail: req.get('mail') || req.get('HTTP_MAIL'),
+		persistentId: req.get('persistent-id') || req.get('HTTP_PERSISTENT_ID'),
+		sn: req.get('sn') || req.get('HTTP_SN'),
+		uid: req.get('uid') || req.get('HTTP_UID'),
+		unscopedAffiliation: req.get('unscoped-affiliation') || req.get('HTTP_UNSCOPED_AFFILIATION')
+	}
+
+	// If we have SSO attributes, create a user object
+	if (ssoAttributes.eppn || ssoAttributes.mail) {
+		req.ssoUser = {
+			email: ssoAttributes.mail,
+			name: ssoAttributes.displayName || ssoAttributes.cn,
+			eppn: ssoAttributes.eppn,
+			givenName: ssoAttributes.givenName,
+			sn: ssoAttributes.sn,
+			uid: ssoAttributes.uid,
+			affiliation: ssoAttributes.affiliation,
+			unscopedAffiliation: ssoAttributes.unscopedAffiliation
+		}
+	}
+
+	next()
 }
 
 //middleware that authenticates user by verityfing the token

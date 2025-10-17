@@ -546,6 +546,38 @@
   </footer>
 
   <script>
+    // Make SSO user data available globally for debugging and form population
+    window.__me = {
+      email: <%- user && user.email ? JSON.stringify(user.email) : 'null' %>,
+      name:  <%- user && user.name ? JSON.stringify(user.name) : 'null' %>,
+      eppn:  <%- user && user.eppn ? JSON.stringify(user.eppn) : 'null' %>
+    };
+
+    // Debug: Log SSO attributes to console
+    console.log('SSO User Data:', window.__me);
+
+    // Function to populate form fields with SSO data
+    function populateFormWithSSOData() {
+      if (window.__me.email) {
+        const emailField = document.querySelector('input[name="Email"]');
+        if (emailField && !emailField.value) {
+          emailField.value = window.__me.email;
+          console.log('Populated email field with SSO data:', window.__me.email);
+        }
+      }
+
+      if (window.__me.name) {
+        const authorField = document.querySelector('input[name="Author"]');
+        if (authorField && !authorField.value) {
+          authorField.value = window.__me.name;
+          console.log('Populated author field with SSO data:', window.__me.name);
+        }
+      }
+    }
+
+    // Populate form when page loads
+    document.addEventListener('DOMContentLoaded', populateFormWithSSOData);
+
     (function () {
       const form = document.getElementById('recordForm');
       // Base URL for the GET request. Override by passing { actionUrl: 'https://host/create' } to the EJS template
