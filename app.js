@@ -152,6 +152,21 @@ filesRouter.use(// Static serving: /files/filename.pdf
 app.use('/files', auth, filesRouter)
 
 
+//debug endpoint to check SSO attributes
+app.get('/whoami', (req, res) => {
+	// Express lowercases header names
+	const h = req.headers;
+	res.json({
+		email:      h['x-email'] || h['mail'] || null,
+		name:       h['x-name']  || h['displayname'] || null,
+		eppn:       h['x-eppn']  || h['eppn'] || null,
+		remoteUser: h['x-remote-user'] || h['remote-user'] || null,
+		given:      h['x-given-name'] || h['givenname'] || null,
+		sn:         h['x-surname'] || h['sn'] || null,
+		_debugAll:  h, // remove later
+	});
+});
+
 //web view for the request form
 app.get('/', extractSSOAttributes, (req, res) => {
 
@@ -497,6 +512,18 @@ function extractSSOAttributes(req, res, next) {
 		entitlement: req.get('X-Entitlement')
 	}
 
+	// Server-side logging of SSO attributes
+	console.log('SSO Attributes received:', {
+		remoteUser: ssoAttributes.remoteUser,
+		email: ssoAttributes.email,
+		name: ssoAttributes.name,
+		eppn: ssoAttributes.eppn,
+		givenName: ssoAttributes.givenName,
+		surname: ssoAttributes.surname,
+		affiliation: ssoAttributes.affiliation,
+		entitlement: ssoAttributes.entitlement
+	});
+
 	// If we have SSO attributes, create a user object
 	if (ssoAttributes.eppn || ssoAttributes.email) {
 		req.ssoUser = {
@@ -509,6 +536,9 @@ function extractSSOAttributes(req, res, next) {
 			affiliation: ssoAttributes.affiliation,
 			entitlement: ssoAttributes.entitlement
 		}
+		console.log('SSO User object created:', req.ssoUser);
+	} else {
+		console.log('No SSO attributes found - user not authenticated via SSO');
 	}
 
 	next()
