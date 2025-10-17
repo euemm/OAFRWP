@@ -549,9 +549,9 @@
     console.log("User data:", "<%- user %>");
     // Make SSO user data available globally for debugging and form population
     window.__me = {
-      email: "<%- user && user.email ? JSON.stringify(user.email) : 'null' %>",
-      name:  "<%- user && user.name ? JSON.stringify(user.name) : 'null' %>",
-      eppn:  "<%- user && user.eppn ? JSON.stringify(user.eppn) : 'null' %>"
+      email: <%- user && user.email ? JSON.stringify(user.email) : 'null' %>,
+      name:  <%- user && user.name ? JSON.stringify(user.name) : 'null' %>,
+      eppn:  <%- user && user.eppn ? JSON.stringify(user.eppn) : 'null' %>
     };
 
     // Debug: Log SSO attributes to console
