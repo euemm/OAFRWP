@@ -96,6 +96,9 @@ app.use(express.urlencoded({ extended: true }))
 //serve static files from public directory
 app.use('/public', express.static(path.join(__dirname, 'public')))
 
+// Apply SSO attribute extraction to all routes
+app.use(extractSSOAttributes)
+
 //settings for viewing files
 const filesRouter = express.Router()
 const FILES_DIR = path.join(__dirname, 'files')
@@ -168,7 +171,7 @@ app.get('/whoami', (req, res) => {
 });
 
 //web view for the request form
-app.get('/', extractSSOAttributes, (req, res) => {
+app.get('/', (req, res) => {
 
 	res.render('index', {
 		endPoint : LOCAL,
