@@ -76,16 +76,39 @@
       <header class="section-head">
         <h2>Budget Controls</h2>
       </header>
-      <div style="display: flex; gap: 16px; align-items: end;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+        <!-- Total Budget Controls -->
         <div>
-          <label for="changeBudgetInput" style="display: block; font-size: 0.9rem; margin-bottom: 4px; font-weight: 600;">Change Budget Amount:</label>
-          <input type="number" id="changeBudgetInput" placeholder="Enter amount (+ or -)" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; width: 180px;">
-          <button id="changeBudgetBtn" style="margin-left: 8px;">Change Budget</button>
+          <h3 style="margin: 0 0 12px 0; font-size: 1rem; color: #333;">Total Budget</h3>
+          <div style="display: flex; gap: 16px; align-items: end;">
+            <div>
+              <label for="changeBudgetInput" style="display: block; font-size: 0.9rem; margin-bottom: 4px; font-weight: 600;">Change Budget Amount:</label>
+              <input type="number" id="changeBudgetInput" placeholder="Enter amount (+ or -)" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; width: 180px;">
+              <button id="changeBudgetBtn" style="margin-left: 8px;">Change Budget</button>
+            </div>
+            <div>
+              <label for="setBudgetInput" style="display: block; font-size: 0.9rem; margin-bottom: 4px; font-weight: 600;">Set Budget Total:</label>
+              <input type="number" id="setBudgetInput" placeholder="Enter total amount" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; width: 180px;">
+              <button id="setBudgetBtn" style="margin-left: 8px;">Set Budget</button>
+            </div>
+          </div>
         </div>
+        
+        <!-- Running Total Controls -->
         <div>
-          <label for="setBudgetInput" style="display: block; font-size: 0.9rem; margin-bottom: 4px; font-weight: 600;">Set Budget Total:</label>
-          <input type="number" id="setBudgetInput" placeholder="Enter total amount" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; width: 180px;">
-          <button id="setBudgetBtn" style="margin-left: 8px;">Set Budget</button>
+          <h3 style="margin: 0 0 12px 0; font-size: 1rem; color: #333;">Running Total</h3>
+          <div style="display: flex; gap: 16px; align-items: end;">
+            <div>
+              <label for="changeRunningInput" style="display: block; font-size: 0.9rem; margin-bottom: 4px; font-weight: 600;">Change Running Total:</label>
+              <input type="number" id="changeRunningInput" placeholder="Enter amount (+ or -)" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; width: 180px;">
+              <button id="changeRunningBtn" style="margin-left: 8px;">Change Running</button>
+            </div>
+            <div>
+              <label for="setRunningInput" style="display: block; font-size: 0.9rem; margin-bottom: 4px; font-weight: 600;">Set Running Total:</label>
+              <input type="number" id="setRunningInput" placeholder="Enter total amount" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; width: 180px;">
+              <button id="setRunningBtn" style="margin-left: 8px;">Set Running</button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -151,6 +174,10 @@
       const setBudgetBtn = document.getElementById('setBudgetBtn');
       const changeBudgetInput = document.getElementById('changeBudgetInput');
       const setBudgetInput = document.getElementById('setBudgetInput');
+      const changeRunningBtn = document.getElementById('changeRunningBtn');
+      const setRunningBtn = document.getElementById('setRunningBtn');
+      const changeRunningInput = document.getElementById('changeRunningInput');
+      const setRunningInput = document.getElementById('setRunningInput');
 
       // Navigate back to requests page
       requestsBtn.addEventListener('click', () => {
@@ -184,6 +211,28 @@
         setBudgetInput.value = '';
       });
 
+      // Change running total functionality
+      changeRunningBtn.addEventListener('click', async () => {
+        const amount = changeRunningInput.value.trim();
+        if (!amount || isNaN(amount)) {
+          alert('Please enter a valid number');
+          return;
+        }
+        await updateRunning('updateRunning', amount);
+        changeRunningInput.value = '';
+      });
+
+      // Set running total functionality
+      setRunningBtn.addEventListener('click', async () => {
+        const amount = setRunningInput.value.trim();
+        if (!amount || isNaN(amount) || Number(amount) < 0) {
+          alert('Please enter a valid positive number');
+          return;
+        }
+        await updateRunning('setRunning', amount);
+        setRunningInput.value = '';
+      });
+
       refreshBtn.addEventListener('click', () => { loadBudget(); });
 
       function fmtDate(iso) { try { return new Date(iso).toLocaleString(); } catch { return iso; } }
@@ -206,6 +255,26 @@
         } catch (err) {
           alert(`Failed to ${action === 'updateBudget' ? 'change' : 'set'} budget: ` + err.message);
           statusEl.textContent = `Failed to ${action === 'updateBudget' ? 'change' : 'set'} budget`;
+        }
+      }
+
+      async function updateRunning(action, amount) {
+        try {
+          statusEl.textContent = `${action === 'updateRunning' ? 'Changing' : 'Setting'} running total...`;
+          const url = `/${action}/${encodeURIComponent(amount)}`;
+          const method = action === 'setRunning' ? 'POST' : 'PUT';
+          const res = await fetch(url, { 
+            method: method, 
+            headers: { 'Accept': 'application/json; charset=utf-8' } 
+          });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          
+          statusEl.textContent = `Running total ${action === 'updateRunning' ? 'changed' : 'set'} successfully`;
+          // Refresh the budget data to show the updated values
+          loadBudget();
+        } catch (err) {
+          alert(`Failed to ${action === 'updateRunning' ? 'change' : 'set'} running total: ` + err.message);
+          statusEl.textContent = `Failed to ${action === 'updateRunning' ? 'change' : 'set'} running total`;
         }
       }
 

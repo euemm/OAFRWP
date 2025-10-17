@@ -51,8 +51,8 @@ app.use(cookieParser())
 //Settings for apache
 app.set('trust proxy', 1); // if exactly one proxy (Apache) is in front
 
-const LOCAL = 'https://oafund.library.brandeis.edu'
-//const LOCAL = 'http://localhost:3000'
+// const LOCAL = 'https://oafund.library.brandeis.edu'
+const LOCAL = 'http://localhost:3000'
 
 //MULTER storage settings like default naming
 const storage = multer.diskStorage({
@@ -335,6 +335,100 @@ function ensureCSV(filePath) {
 
 		console.log('asdfasdf')
 
+	}
+
+}
+
+//method to validate and fix budget.csv format
+function validateBudgetCSV(filePath) {
+
+	try {
+
+		const content = fs.readFileSync(filePath, 'utf8')
+		const lines = content.trim().split(os.EOL)
+		
+		if (lines.length === 0) {
+			console.log('Budget file is empty, creating header')
+			const header = 'Timestamp,Total Amount,Change,Reason,RunningTotal,RunningTotalChange'
+			fs.writeFileSync(filePath, header + os.EOL)
+			return
+		}
+
+		// Validate header
+		const expectedHeader = 'Timestamp,Total Amount,Change,Reason,RunningTotal,RunningTotalChange'
+		if (lines[0] !== expectedHeader) {
+			console.log('Fixing budget header format')
+			lines[0] = expectedHeader
+		}
+
+		let needsRewrite = false
+		const fixedLines = [lines[0]] // Start with header
+
+		// Process data rows (skip header)
+		for (let i = 1; i < lines.length; i++) {
+			const line = lines[i].trim()
+			if (!line) continue // Skip empty lines
+
+			const fields = line.split(',')
+			
+			// Ensure we have exactly 6 fields
+			if (fields.length !== 6) {
+				console.log(`Fixing budget row ${i}: incorrect field count`)
+				// Pad with empty fields or truncate as needed
+				while (fields.length < 6) {
+					fields.push('')
+				}
+				fields.splice(6) // Remove excess fields
+				needsRewrite = true
+			}
+
+			// Validate and fix numeric fields
+			const numericFields = [1, 2, 4, 5] // Total Amount, Change, RunningTotal, RunningTotalChange
+			for (const fieldIndex of numericFields) {
+				const value = fields[fieldIndex].trim()
+				if (value === '' || value === 'undefined' || value === 'null') {
+					fields[fieldIndex] = '0'
+					needsRewrite = true
+				} else {
+					// Try to parse as number and validate
+					const numValue = Number(value)
+					if (isNaN(numValue) || !isFinite(numValue)) {
+						console.log(`Fixing budget row ${i}, field ${fieldIndex}: invalid number "${value}" -> 0`)
+						fields[fieldIndex] = '0'
+						needsRewrite = true
+					} else {
+						// Ensure it's formatted as a clean number
+						fields[fieldIndex] = numValue.toString()
+					}
+				}
+			}
+
+			fixedLines.push(fields.join(','))
+		}
+
+		// Rewrite file if changes were needed
+		if (needsRewrite) {
+			console.log('Rewriting budget file with corrected format')
+			fs.writeFileSync(filePath, fixedLines.join(os.EOL) + os.EOL)
+		}
+
+		// Ensure file ends with newline
+		const finalContent = fs.readFileSync(filePath, 'utf8')
+		if (finalContent.length > 0 && finalContent[finalContent.length - 1] !== os.EOL) {
+			fs.appendFileSync(filePath, os.EOL)
+		}
+
+	} catch (error) {
+		console.error('Error validating budget CSV:', error)
+		// Create a basic valid budget file if validation fails
+		try {
+			const header = 'Timestamp,Total Amount,Change,Reason,RunningTotal,RunningTotalChange'
+			const defaultRow = `${new Date().toISOString()},0,0,Initial budget,0,0`
+			fs.writeFileSync(filePath, header + os.EOL + defaultRow + os.EOL)
+			console.log('Created default budget file')
+		} catch (writeError) {
+			console.error('Failed to create default budget file:', writeError)
+		}
 	}
 
 }
@@ -940,6 +1034,9 @@ function changeBudgetTotal(amount, reason) {
 
 		const timestamp = new Date().toISOString()
 
+		// Validate budget CSV before reading
+		validateBudgetCSV(path.join(__dirname, __budgetFileName))
+
 		fs.readFile(path.join(__dirname, __budgetFileName), 'utf8', (err, data) => {
 
 			if (err) { 
@@ -987,6 +1084,9 @@ function changeRunningTotal(amount, reason) {
 	return new Promise((resolve, reject) => {
 
 		const timestamp = new Date().toISOString()
+
+		// Validate budget CSV before reading
+		validateBudgetCSV(path.join(__dirname, __budgetFileName))
 
 		fs.readFile(path.join(__dirname, __budgetFileName), 'utf8', (err, data) => {
 
@@ -1344,6 +1444,9 @@ app.put('/updateBudget/:amount', auth, async (req, res) => {
 		let amount
 		if (req.params.amount) { amount = req.params.amount } else { reject(); return; }
 		
+		// Validate budget CSV before making changes
+		validateBudgetCSV(path.join(__dirname, __budgetFileName))
+		
 		try {
 		
 			const result = await changeBudgetTotal(Number(amount), `${new Date().toISOString()} Updated Budget`)
@@ -1399,6 +1502,9 @@ app.post('/setBudget/:amount', auth, (req, res) => {
 		if (req.params.amount) { totalAmount = req.params.amount } else { reject() }
 		if (req.query.reason) { reason = req.query.reason }
 
+		// Validate budget CSV before reading
+		validateBudgetCSV(path.join(__dirname, __budgetFileName))
+
 		fs.readFile(`${__dirname}/${__budgetFileName}`, 'utf8', (err, data) => {
 
 			if (err) { reject() }
@@ -1444,136 +1550,258 @@ app.post('/setBudget/:amount', auth, (req, res) => {
 
 })
 
+//sets Running Total to specific number
+//query goes like this
+// /setRunning/50000?reason=initial running total
+// /setRunning/0?reason=reset running total
+//this is used to set initial running total or reset running total
+//amount param is mandatory and reason query is optional ('set running total' by default)
+app.post('/setRunning/:amount', auth, (req, res) => {
+
+	new Promise((resolve, reject) => {
+
+		let date_time = new Date()
+		const timestamp = date_time.toISOString()
+
+		let totalAmount = undefined
+		let changeAmount = undefined
+		let reason = timestamp + ' Set Running Total'
+
+		if (req.params.amount) { totalAmount = req.params.amount } else { reject() }
+		if (req.query.reason) { reason = req.query.reason }
+
+		// Validate budget CSV before reading
+		validateBudgetCSV(path.join(__dirname, __budgetFileName))
+
+		fs.readFile(`${__dirname}/${__budgetFileName}`, 'utf8', (err, data) => {
+
+			if (err) { reject() }
+
+			const lines = data.trim().split(os.EOL)
+
+			if (lines.length == 1) {
+
+				changeAmount = totalAmount
+
+			} else {
+
+				changeAmount = totalAmount - Number(lines[lines.length - 1].split(',')[4])
+
+			}
+
+			let input = [
+				timestamp,
+				lines.length == 1 ? 0 : lines[lines.length - 1].split(',')[1],
+				0,
+				reason,
+				totalAmount,
+				changeAmount
+			]
+
+			fs.appendFile(`${__dirname}/${__budgetFileName}`, input.join(",") + os.EOL, (err) => {
+
+				if (err) { reject() }
+
+				resolve()
+
+			})
+
+		})
+
+	}).then(() => { //ON RESOLVE
+
+		res.status(200).send(200)
+
+	}, () => {      //ON REJECT
+
+		res.status(400).send(400)
+
+	})
+
+})
+
+//updates Running Total with specific amount (+ or -)
+//query goes like this
+// /updateRunning/+5000?reason=donation
+// /updateRunning/-10000?reason=expense
+//amount param is mandatory and reason query is optional ('update running total' by default)
+app.put('/updateRunning/:amount', auth, async (req, res) => {
+
+	backupBudget()
+
+	new Promise(async (resolve, reject) => {
+
+		let amount
+		if (req.params.amount) { amount = req.params.amount } else { reject(); return; }
+		
+		// Validate budget CSV before making changes
+		validateBudgetCSV(path.join(__dirname, __budgetFileName))
+		
+		try {
+		
+			const result = await changeRunningTotal(Number(amount), `${new Date().toISOString()} Updated Running Total`)
+			
+			if(result) { 
+				resolve() 
+			} else { 
+				reject() 
+			}
+		
+		} catch (error) {
+
+			console.log('Error in changeRunningTotal:', error)
+			reject()
+		
+		}
+
+	}).then(() => {
+
+		console.log('resolved request')
+
+		res.status(200).send(200)
+
+	}, () => {
+
+		console.log('rejected request')
+
+		revertBudget()
+
+		res.status(400).send(400)
+
+	})
+
+})
+
 //Edits specific line
 //query goes like
 // /update/2025-10-29-04-55-30?email=nobody@brandeis.edu
 // /update/2025-10-29-04-55-30?amount=1&OAstatus=approved
 //timestamp param is mandatory other queries are optional
-// app.put('/update/:timestamp', auth, (req, res) => {
+app.put('/update/:timestamp', auth, (req, res) => {
 
-// 	new Promise((resolve, reject) => {
+	new Promise((resolve, reject) => {
 
-// 		backupFile()
+		backupFile()
 
-// 		let timestamp = undefined
+		let timestamp = undefined
 
-// 		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject() }
+		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject() }
 
-// 		fs.readFile(`${__dirname}/${__filename}`, 'utf8', (err, data) => {
+		fs.readFile(`${__dirname}/${__filename}`, 'utf8', (err, data) => {
 
-// 			if (err) { reject('asdf') }
+			if (err) { reject('asdf') }
 
-// 			let lines = data.split(os.EOL)
-// 			let file = []
+			let lines = data.split(os.EOL)
+			let file = []
 
-// 			for (const i of lines) {
-// 				file.push(i.split(","))
-// 			}
+			for (const i of lines) {
+				file.push(i.split(","))
+			}
 
-// 			let edit = false
+			let edit = false
 
-// 			for (let i = 1; i < file.length; i++) {
+			for (let i = 1; i < file.length; i++) {
 
-// 				if (file[i][0] === timestamp) {
+				if (file[i][0] === timestamp) {
 
-// 					edit = true
+					edit = true
 
-// 					let email
-// 					let title
-// 					let amount
-// 					let author
-// 					let authorORCiD
-// 					let collab
-// 					let collabORCiD
-// 					let journal
-// 					let journalISSN 
-// 					let publisher
-// 					let status
-// 					let type 
-// 					let DOI
-// 					let comment
-// 					let OAstatus
+					let email
+					let title
+					let amount
+					let author
+					let authorORCiD
+					let collab
+					let collabORCiD
+					let journal
+					let journalISSN 
+					let publisher
+					let status
+					let type 
+					let DOI
+					let comment
+					let OAstatus
 
-// 					if (req.query.email) { email = req.query.email.replace(",", ".") } else { email = file[i][1] }
-// 					if (req.query.title) { title = req.query.title.replace(",", ".") } else { title = file[i][2] }
-// 					if (req.query.amount) { amount = req.query.amount.replace(",", ".") } else { amount = file[i][3] }
-// 					if (req.query.author) { author = req.query.author.replace(",", ".") } else { author = file[i][4] }
-// 					if (req.query.authorORCiD) { authorORCiD = req.query.authorORCiD.replace(",", ".") } else { authorORCiD = file[i][5] }
-// 					if (req.query.collab) { collab = req.query.collab.replace(",", ".") } else { collab = file[i][6] }
-// 					if (req.query.collabORCiD) { collabORCiD = req.query.collabORCiD.replace(",", ".") } else { collabORCiD = file[i][7] }
-// 					if (req.query.journal) { journal = req.query.journal.replace(",", ".") } else { journal = file[i][8] }
-// 					if (req.query.journalISSN) { journalISSN = req.query.journalISSN.replace(",", ".") } else { journalISSN = file[i][9] }
-// 					if (req.query.publisher) { publisher = req.query.publisher.replace(",", ".") } else { publisher = file[i][10] }
-// 					if (req.query.status) { status = req.query.status.replace(",", ".") } else { status = file[i][11] }
-// 					if (req.query.type) { type = req.query.type.replace(",", ".") } else { type = file[i][12] }
-// 					if (req.query.DOI) { DOI = req.query.DOI.replace(",", ".") } else { DOI = file[i][13] }
-// 					if (req.query.comment) { comment = req.query.comment.replace(",", ".") } else { comment = file[i][14] }
-// 					if (req.query.OAstatus) { OAstatus = req.query.OAstatus.replace(",", ".") } else { OAstatus = file[i][15] }
+					if (req.query.email) { email = req.query.email.replace(",", ".") } else { email = file[i][1] }
+					if (req.query.title) { title = req.query.title.replace(",", ".") } else { title = file[i][2] }
+					if (req.query.amount) { amount = req.query.amount.replace(",", ".") } else { amount = file[i][3] }
+					if (req.query.author) { author = req.query.author.replace(",", ".") } else { author = file[i][4] }
+					if (req.query.authorORCiD) { authorORCiD = req.query.authorORCiD.replace(",", ".") } else { authorORCiD = file[i][5] }
+					if (req.query.collab) { collab = req.query.collab.replace(",", ".") } else { collab = file[i][6] }
+					if (req.query.collabORCiD) { collabORCiD = req.query.collabORCiD.replace(",", ".") } else { collabORCiD = file[i][7] }
+					if (req.query.journal) { journal = req.query.journal.replace(",", ".") } else { journal = file[i][8] }
+					if (req.query.journalISSN) { journalISSN = req.query.journalISSN.replace(",", ".") } else { journalISSN = file[i][9] }
+					if (req.query.publisher) { publisher = req.query.publisher.replace(",", ".") } else { publisher = file[i][10] }
+					if (req.query.status) { status = req.query.status.replace(",", ".") } else { status = file[i][11] }
+					if (req.query.type) { type = req.query.type.replace(",", ".") } else { type = file[i][12] }
+					if (req.query.DOI) { DOI = req.query.DOI.replace(",", ".") } else { DOI = file[i][13] }
+					if (req.query.comment) { comment = req.query.comment.replace(",", ".") } else { comment = file[i][14] }
+					if (req.query.OAstatus) { OAstatus = req.query.OAstatus.replace(",", ".") } else { OAstatus = file[i][15] }
 
-// 					file[i] = [
-// 						timestamp,
-// 						email,
-// 						title,
-// 						amount,
-// 						author,
-// 						authorORCiD,
-// 						collab,
-// 						collabORCiD,
-// 						journal,
-// 						journalISSN,
-// 						publisher,
-// 						status,
-// 						type,
-// 						DOI,
-// 						comment,
-// 						OAstatus
-// 					]
+					file[i] = [
+						timestamp,
+						email,
+						title,
+						amount,
+						author,
+						authorORCiD,
+						collab,
+						collabORCiD,
+						journal,
+						journalISSN,
+						publisher,
+						status,
+						type,
+						DOI,
+						comment,
+						OAstatus
+					]
 
-// 				}
+				}
 
-// 			}
+			}
 
-// 			if (edit) {
+			if (edit) {
 
-// 				let output = []
+				let output = []
 
-// 				for (const i of file) {
+				for (const i of file) {
 
-// 					output.push(i.join(","))
+					output.push(i.join(","))
 
-// 				}
+				}
 
-// 				fs.writeFile(`${__dirname}/${__filename}`, output.join(os.EOL), (err) => {
+				fs.writeFile(`${__dirname}/${__filename}`, output.join(os.EOL), (err) => {
 
-// 					if (err) { reject() }
+					if (err) { reject() }
 
-// 					resolve()
+					resolve()
 
-// 				})
+				})
 
-// 			} else {
+			} else {
 
-// 				reject()
+				reject()
 
-// 			}
+			}
 
-// 		})
+		})
 
-// 	}).then(() => {	//ON RESOLVE
+	}).then(() => {	//ON RESOLVE
 
-// 		res.status(200).send(200)
+		res.status(200).send(200)
 
-// 	}, () => {	//ON REJECT
+	}, () => {	//ON REJECT
 
-// 		revertFile()
+		revertFile()
 
-// 		// console.log(err)
+		// console.log(err)
 
-// 		res.status(400).send(400)
+		res.status(400).send(400)
 
-// 	})
+	})
 
-// })
+})
 
 //Create new line
 //query goes like 
@@ -1769,6 +1997,8 @@ app.get('/fetch', auth, (req, res) => {
 //Fetching budget record as JSON
 app.get('/fetchBudget', auth, (req, res) => {
 
+	// Validate budget CSV format before processing
+	validateBudgetCSV(path.join(__dirname, __budgetFileName))
 	ensureCSV(path.join(__dirname, __budgetFileName))
 
 	new Promise((resolve, reject) => {
