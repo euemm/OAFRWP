@@ -51,8 +51,8 @@ app.use(cookieParser())
 //Settings for apache
 app.set('trust proxy', 1); // if exactly one proxy (Apache) is in front
 
-const LOCAL = 'https://oafund.library.brandeis.edu'
-// const LOCAL = 'http://localhost:3000'
+// const LOCAL = 'https://oafund.library.brandeis.edu'
+const LOCAL = 'http://localhost:3000'
 
 //MULTER storage settings like default naming
 const storage = multer.diskStorage({
@@ -307,7 +307,9 @@ function ensureCSV(filePath) {
 
 		const content = fs.readFileSync(filePath, 'utf8')
 	
-		const list = content.split(os.EOL)
+		// Normalize line endings to system default (os.EOL)
+		const normalizedContent = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+		const list = normalizedContent.split(os.EOL)
 
 		const cols = list[0].split(',').length
 
@@ -321,15 +323,9 @@ function ensureCSV(filePath) {
 
 		}
 		
-		const newcontent = list.join(os.EOL)
+		const newcontent = list.join(os.EOL) + os.EOL
 
 		fs.writeFileSync(filePath, newcontent)
-
-		if(content.length > 0 && content[content.length - 1] !== os.EOL) {
-
-			fs.appendFileSync(filePath, os.EOL)
-
-		}
 
  	} catch {
 
@@ -916,24 +912,18 @@ function revertFile() {
 }
 
 function changeRequestStatus(timestamp, status) {
-
 	let amount
 	let email
 	let title
 
 	return new Promise((resolve, reject) => {
-
 		fs.readFile(path.join(__dirname, __filename), 'utf8', (err, data) => {
-
 			if (err) { 
 				reject(err) 
 				return
 			}
 
 			const lines = data.trim().split(os.EOL)
-
-			// if (lines.length == 1) { reject() }
-
 			let file = []
 
 			for (const i of lines) { file.push(i.split(",")) }
@@ -941,91 +931,81 @@ function changeRequestStatus(timestamp, status) {
 			let edit = false
 
 			for (let i = 1; i < file.length; i ++) {
-
 				if (file[i][0] === timestamp) {
-
-			if (status == APPROVED && file[i][15] === SUBMITTED) { 
-				file[i][15] = APPROVED; 
-				edit = true; 
-				amount = file[i][3]
-				email = file[i][1]
-				title = file[i][2]
-			}
-			if (status == DENIED && file[i][15] === SUBMITTED) { 
-				file[i][15] = DENIED; 
-				edit = true; 
-				amount = file[i][3]
-				email = file[i][1]
-				title = file[i][2]
-			}
-			if (status == PAID && file[i][15] === APPROVED) { 
-				file[i][15] = PAID; 
-				edit = true; 
-				amount = file[i][3]
-				email = file[i][1]
-				title = file[i][2]
-			}
-			if (status == PAID && file[i][15] === PAYMENT_PLANNED) { 
-				file[i][15] = PAID; 
-				edit = true; 
-				amount = file[i][3]
-				email = file[i][1]
-				title = file[i][2]
-			}
-			if (status == CANCELLED && file[i][15] === APPROVED) { 
-				file[i][15] = CANCELLED; 
-				edit = true; 
-				amount = file[i][3]
-				email = file[i][1]
-				title = file[i][2]
-			}
-			if (status == PAYMENT_PLANNED && file[i][15] === APPROVED) { 
-				file[i][15] = PAYMENT_PLANNED; 
-				edit = true; 
-				amount = file[i][3]
-				email = file[i][1]
-				title = file[i][2]
-			}
+					// Trim the status to handle whitespace issues
+					const currentStatus = file[i][15] ? file[i][15].trim() : ''
+					
+					if (status == APPROVED && currentStatus === SUBMITTED) { 
+						file[i][15] = APPROVED; 
+						edit = true; 
+						amount = file[i][3]
+						email = file[i][1]
+						title = file[i][2]
+					}
+					if (status == DENIED && currentStatus === SUBMITTED) { 
+						file[i][15] = DENIED; 
+						edit = true; 
+						amount = file[i][3]
+						email = file[i][1]
+						title = file[i][2]
+					}
+					if (status == PAID && currentStatus === APPROVED) { 
+						file[i][15] = PAID; 
+						edit = true; 
+						amount = file[i][3]
+						email = file[i][1]
+						title = file[i][2]
+					}
+					if (status == PAID && currentStatus === PAYMENT_PLANNED) { 
+						file[i][15] = PAID; 
+						edit = true; 
+						amount = file[i][3]
+						email = file[i][1]
+						title = file[i][2]
+					}
+					if (status == CANCELLED && currentStatus === APPROVED) { 
+						file[i][15] = CANCELLED; 
+						edit = true; 
+						amount = file[i][3]
+						email = file[i][1]
+						title = file[i][2]
+					}
+					if (status == PAYMENT_PLANNED && currentStatus === APPROVED) { 
+						file[i][15] = PAYMENT_PLANNED; 
+						edit = true; 
+						amount = file[i][3]
+						email = file[i][1]
+						title = file[i][2]
+					}
 
 					break; // Found the record, exit loop
-
 				}
-
 			}
 
 			if (!edit) {
-				reject('400 No such request found')
+				reject('400 No such request found or invalid status change')
 				return
 			}
 
 			if (edit) {
-
 				let output = []
 
 				for (const i of file) { output.push(i.join(",")) }
 
-				fs.writeFile(path.join(__dirname, __filename), output.join(os.EOL), (err) => {
-
-					if (err) { reject('500 error writing file') }
-
-					else { resolve({ amount, email, title }) }
-
+				fs.writeFile(path.join(__dirname, __filename), output.join(os.EOL) + os.EOL, (err) => {
+					if (err) { 
+						reject('500 error writing file') 
+					} else { 
+						resolve({ amount, email, title }) 
+					}
 				})
-
 			} else {
-
 				reject('400 Invalid status change')
-
 			}
-
 		})
-
 	}).catch((error) => {
-
 		return false
-
 	})
-
 }
 
 function changeBudgetTotal(amount, reason) {
@@ -1298,65 +1278,50 @@ app.put('/planned/:timestamp', auth, (req, res) => {
 //updates the status of request from TRANSACTION_PLANNED to PAID
 //this is the endpoint for the request and no further actions should be done on this request
 app.put('/paid/:timestamp', auth, (req, res) => {
-
 	new Promise(async (resolve, reject) => {
-
 		backupFile()
-
 		let timestamp
-		if (req.params.timestamp) { timestamp = req.params.timestamp } else { reject(); return; }
-
+		if (req.params.timestamp) { 
+			timestamp = req.params.timestamp 
+		} else { 
+			reject('No timestamp provided')
+			return
+		}
 		try {
 			const result = await changeRequestStatus(timestamp, PAID)
-
 			if(result) {
 				resolve({ amount: Number(result.amount), timestamp: timestamp, email: result.email, title: result.title })
 			} else {
-				reject()
+				reject('changeRequestStatus returned false')
 			}
 		} catch (error) {
-			console.log('Error changing request status to PAID:', error)
-			reject()
+			reject(error)
 		}
-
 	}).then(async (data) => {
-
 		backupBudget()
-
 		try {
 			const result = await changeBudgetTotal(-Number(data.amount), `${data.timestamp} ${PAID}`)
 			const running = await changeRunningTotal(-Number(data.amount), `${data.timestamp} ${PAID}`)
-
 			if(result && running) {
-
 				res.status(200).send(200)
-
 				const additionalInfo = {
 					timestamp: data.timestamp,
 					title: data.title,
 					amount: data.amount
 				}
-				
 				sendApplicationUpdateEmail(data.email, PAID, additionalInfo)
-
 			} else {
 				revertBudget()
 				res.status(400).send(400)
 			}
 		} catch (error) {
-			console.log('Error updating budget total:', error)
 			revertBudget()
 			res.status(400).send(400)
 		}
-
-	}, () => {
-
+	}, (rejectionReason) => {
 		revertFile()
-
 		res.status(400).send(400)
-
 	})
-
 })
 
 //Approves one specific line
@@ -1771,7 +1736,7 @@ app.put('/update/:timestamp', auth, (req, res) => {
 
 				}
 
-				fs.writeFile(`${__dirname}/${__filename}`, output.join(os.EOL), (err) => {
+				fs.writeFile(`${__dirname}/${__filename}`, output.join(os.EOL) + os.EOL, (err) => {
 
 					if (err) { reject() }
 

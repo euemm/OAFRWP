@@ -96,6 +96,7 @@
     .nowrap { white-space:nowrap; }
     .small { font-size:.85rem; color:#444; }
     .actions-cell { min-width: 0px; }
+    .edit-cell { min-width: 100px; text-align: center; }
     
     /* Specific column widths for better readability */
     .col-timestamp { min-width: 110px; }
@@ -243,6 +244,63 @@
       font-weight: 600;
     }
     .edit-btn-cancel:hover { background: #545b62; }
+    
+    /* Confirmation modal styles */
+    .confirm-modal { 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      background: rgba(0,0,0,0.5); 
+      display: none; 
+      align-items: center; 
+      justify-content: center; 
+      z-index: 1001;
+    }
+    .confirm-modal.show { display: flex; }
+    .confirm-modal-content { 
+      background: white; 
+      padding: 24px; 
+      border-radius: 8px; 
+      max-width: 400px; 
+      width: 90%; 
+      text-align: center;
+    }
+    .confirm-modal-title { 
+      font-size: 1.2rem; 
+      font-weight: 600; 
+      margin: 0 0 16px 0;
+      color: #333;
+    }
+    .confirm-modal-message { 
+      margin-bottom: 20px; 
+      color: #666; 
+      line-height: 1.5;
+    }
+    .confirm-modal-actions { 
+      display: flex; 
+      gap: 12px; 
+      justify-content: center;
+    }
+    .confirm-btn { 
+      padding: 10px 20px; 
+      border: none; 
+      border-radius: 6px; 
+      cursor: pointer; 
+      font-weight: 600; 
+      font-size: 1rem;
+    }
+    .confirm-btn-cancel { 
+      background: #6c757d; 
+      color: white;
+    }
+    .confirm-btn-cancel:hover { background: #545b62; }
+    .confirm-btn-commit { 
+      background: #dc3545; 
+      color: white;
+    }
+    .confirm-btn-commit:hover { background: #c82333; }
   </style>
 </head>
 <body>
@@ -300,6 +358,18 @@
           </table>
         </div>
       </section>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmModal" class="confirm-modal">
+    <div class="confirm-modal-content">
+      <h3 class="confirm-modal-title">Confirm Action</h3>
+      <div class="confirm-modal-message" id="confirmMessage"></div>
+      <div class="confirm-modal-actions">
+        <button class="confirm-btn confirm-btn-cancel" id="confirmCancel">Cancel</button>
+        <button class="confirm-btn confirm-btn-commit" id="confirmCommit">Commit</button>
+      </div>
     </div>
   </div>
 
@@ -522,7 +592,12 @@
           const displayTitle = columnTitles[c] || c;
           return `<th class="${(groupClass + ' ' + colClass).trim()}">${displayTitle}</th>`;
         }).join('');
-        thead.innerHTML = `<tr><th class="nowrap">Actions</th>` + headerCells + `</tr>`;
+        // Split headerCells to insert Actions after the first column (Timestamp)
+        const headerArray = headerCells.split('</th>').filter(cell => cell.trim());
+        const firstColumn = headerArray[0] + '</th>';
+        const remainingColumns = headerArray.slice(1).map(cell => cell + '</th>').join('');
+        
+        thead.innerHTML = `<tr>` + firstColumn + `<th class="nowrap">Actions</th>` + remainingColumns + `<th class="nowrap">Edit</th></tr>`;
         
 
         const frag = document.createDocumentFragment();
@@ -585,6 +660,18 @@
             }
           });
 
+          // Add Edit Value button as the last column
+          const tdEdit = document.createElement('td');
+          tdEdit.className = 'edit-cell';
+          const editBtn = document.createElement('button');
+          editBtn.className = 'edit-btn';
+          editBtn.textContent = 'Edit Value';
+          editBtn.addEventListener('click', () => {
+            openEditModal(row);
+          });
+          tdEdit.appendChild(editBtn);
+          tr.appendChild(tdEdit);
+
           frag.appendChild(tr);
         });
         tbody.innerHTML = '';
@@ -629,22 +716,12 @@
           sel.addEventListener('change', async () => {
             const key = sel.value;
             if (!key) return;
-            // hit endpoint
-            await hitActionEndpoint(endpoints[key], row, sel);
-            sel.value = ''; // reset
+            
+            // Show confirmation modal
+            showActionConfirmation(key, row, sel, endpoints[key]);
           });
         }
         wrap.appendChild(sel);
-        
-        // Add edit button
-        const editBtn = document.createElement('button');
-        editBtn.className = 'edit-btn';
-        editBtn.textContent = 'Edit Value';
-        editBtn.addEventListener('click', () => {
-          openEditModal(row);
-        });
-        wrap.appendChild(editBtn);
-        
         return wrap;
       }
 
@@ -706,6 +783,84 @@
           runningTotalEl.textContent = 'N/A';
         }
       }
+
+      // Confirmation modal functionality
+      let currentActionData = null;
+      
+      function showActionConfirmation(actionKey, row, selectElement, endpoint) {
+        const actionLabels = {
+          'APPROVED': 'Approve',
+          'DENIED': 'Deny',
+          'CANCELLED': 'Cancel',
+          'PAID': 'Mark as Paid',
+          'PAYMENT_PLANNED': 'Mark as Payment Planned'
+        };
+        
+        const actionLabel = actionLabels[actionKey] || actionKey;
+        const title = row['Title of Article / Chapter / Book'] || row['Title'] || 'Unknown Title';
+        const amount = row['Amount requested'] || row['Amount'] || 'Unknown Amount';
+        
+        currentActionData = {
+          actionKey,
+          row,
+          selectElement,
+          endpoint
+        };
+        
+        const message = `Are you sure you want to <strong>${actionLabel}</strong> this request?<br><br>
+          <strong>Title:</strong> ${title}<br>
+          <strong>Amount:</strong> $${amount}`;
+        
+        document.getElementById('confirmMessage').innerHTML = message;
+        document.getElementById('confirmModal').classList.add('show');
+      }
+      
+      function hideActionConfirmation() {
+        document.getElementById('confirmModal').classList.remove('show');
+        currentActionData = null;
+      }
+      
+      // Confirmation modal event handlers
+      document.getElementById('confirmCancel').addEventListener('click', () => {
+        if (currentActionData) {
+          currentActionData.selectElement.value = ''; // Reset dropdown
+        }
+        hideActionConfirmation();
+      });
+      
+      document.getElementById('confirmCommit').addEventListener('click', async () => {
+        if (!currentActionData) return;
+        
+        try {
+          await hitActionEndpoint(currentActionData.endpoint, currentActionData.row, currentActionData.selectElement);
+          hideActionConfirmation();
+        } catch (error) {
+          console.error('Action failed:', error);
+          hideActionConfirmation();
+        }
+      });
+      
+      // Handle modal close on background click
+      document.getElementById('confirmModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+          if (currentActionData) {
+            currentActionData.selectElement.value = ''; // Reset dropdown
+          }
+          hideActionConfirmation();
+        }
+      });
+      
+      // Handle escape key for confirmation modal
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          if (document.getElementById('confirmModal').classList.contains('show')) {
+            if (currentActionData) {
+              currentActionData.selectElement.value = ''; // Reset dropdown
+            }
+            hideActionConfirmation();
+          }
+        }
+      });
 
       // Edit modal functionality
       let currentEditRow = null;
@@ -769,10 +924,12 @@
         }
       });
       
-      // Handle escape key
+      // Handle escape key for edit modal
       document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && document.getElementById('editModal').classList.contains('show')) {
-          closeEditModal();
+        if (e.key === 'Escape') {
+          if (document.getElementById('editModal').classList.contains('show')) {
+            closeEditModal();
+          }
         }
       });
       
