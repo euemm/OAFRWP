@@ -9,3 +9,6 @@ empty.csv_backup.csv
 test.csv
 tmp.csv
 urls.csv
+
+# User management scripts (keep private for security)
+usermanage.py
