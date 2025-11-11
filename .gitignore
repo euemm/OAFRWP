@@ -15,3 +15,4 @@ usermanage.py
 
 *.backup
 *.db
+/backups

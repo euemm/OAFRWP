@@ -291,22 +291,75 @@ SELECT filename, email, file_size, timestamp FROM files ORDER BY timestamp DESC 
 7. **Test login** and key functionality
 8. **Monitor** for any issues
 
-#### 3. Database File Permissions
+#### 3. Automated Database Backups
+
+The system includes an automated backup system that creates weekly database backups and removes backups older than 1 month.
+
+**Manual Backup**:
+```bash
+npm run backup
+# or
+node backup-db.js
+```
+
+**Set Up Weekly Cron Job**:
+
+1. **Run the setup script**:
+   ```bash
+   chmod +x setup-cron.sh
+   ./setup-cron.sh
+   ```
+
+   This will add a cron job that runs every Sunday at 2:00 AM to:
+   - Create a backup of the database
+   - Remove backups older than 1 month
+   - Log output to `backup.log`
+
+2. **Verify cron job**:
+   ```bash
+   crontab -l
+   ```
+
+3. **Manual cron setup** (alternative):
+   ```bash
+   crontab -e
+   ```
+   Add this line (adjust path as needed):
+   ```
+   0 2 * * 0 cd /path/to/OAFRWP && /usr/bin/node backup-db.js >> backup.log 2>&1
+   ```
+
+**Backup Details**:
+- Backups are stored in the `backups/` directory
+- Backup files are named: `oafrwp-backup-YYYY-MM-DD_HH-MM-SS.db`
+- Backups older than 30 days are automatically deleted
+- The `backups/` directory is git-ignored (see `.gitignore`)
+
+**Restore from Backup**:
+```bash
+# Stop the application
+# Copy backup to main database file
+cp backups/oafrwp-backup-YYYY-MM-DD_HH-MM-SS.db oafrwp.db
+# Restart the application
+```
+
+#### 4. Database File Permissions
 ```bash
 # Set appropriate permissions
 chmod 600 oafrwp.db        # Read/write for owner only
 chmod 644 oafrwp.db-wal    # If WAL mode is enabled
 chmod 644 oafrwp.db-shm    # If WAL mode is enabled
+chmod 755 backups/         # Backup directory permissions
 ```
 
-#### 4. Performance Benefits
+#### 5. Performance Benefits
 - **Faster queries**: Database indexes (especially on timestamp fields) improve query speed
 - **Better concurrency**: SQLite handles concurrent reads efficiently
 - **Data integrity**: ACID transactions prevent data corruption
 - **Easy backup**: Single file backup (`oafrwp.db`)
 - **Efficient budget queries**: Indexed timestamp column makes getting latest budget state fast
 
-#### 5. Rollback Plan (If Needed)
+#### 6. Rollback Plan (If Needed)
 If you need to rollback:
 1. Stop application
 2. Delete `oafrwp.db`
