@@ -12,3 +12,6 @@ urls.csv
 *.csv
 # User management scripts (keep private for security)
 usermanage.py
+
+*.backup
+*.db
