@@ -85,8 +85,6 @@ async function migrateBudget() {
 		const records = await parseCSV(BUDGET_CSV)
 		if (records.length === 0) {
 			console.log('No budget records to migrate')
-			// Initialize budget_current table with default values
-			await db.initDatabase()
 			return
 		}
 
@@ -112,7 +110,6 @@ async function migrateBudget() {
 		}
 
 		console.log(`Successfully migrated ${count} budget records`)
-		console.log('Budget current state table initialized from latest record')
 	} catch (error) {
 		console.error('Error migrating budget:', error)
 	}

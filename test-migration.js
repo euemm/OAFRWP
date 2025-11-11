@@ -28,9 +28,9 @@ async function testMigration() {
 		const budgetRecords = await db.getAllBudgetRecords()
 		console.log(`✓ Budget history table: ${budgetRecords.length} records`)
 
-		// Test 4: Check budget_current table
-		const currentBudget = await db.getCurrentBudget()
-		console.log(`✓ Budget current state: Total=${currentBudget.total_amount}, Running=${currentBudget.running_total}`)
+		// Test 4: Check latest budget record
+		const latestBudget = await db.getLatestBudget()
+		console.log(`✓ Latest budget: Total=${latestBudget.total_amount}, Running=${latestBudget.running_total}`)
 
 		// Test 5: Check credentials table
 		const users = await db.getAllUsers()

@@ -399,11 +399,21 @@
             <option value="type">Publication Type</option>
             <option value="DOI">DOI</option>
             <option value="comment">Comment to Library Team</option>
+            <option value="OAstatus">OA Fund Status (No Email)</option>
           </select>
         </div>
         <div class="edit-form-group">
           <label class="edit-form-label" for="editValue">New Value:</label>
           <input type="text" id="editValue" class="edit-form-input" placeholder="Enter new value..." required>
+          <select id="editValueSelect" class="edit-form-input" style="display: none;" required>
+            <option value="">Select status...</option>
+            <option value="submitted">submitted</option>
+            <option value="APPROVED">APPROVED</option>
+            <option value="DENIED">DENIED</option>
+            <option value="PAID">PAID</option>
+            <option value="PAYMENT_PLANNED">PAYMENT_PLANNED</option>
+            <option value="CANCELLED">CANCELLED</option>
+          </select>
         </div>
         <div class="edit-modal-actions">
           <button type="button" class="edit-btn-cancel" id="editModalCancel">Cancel</button>
@@ -873,6 +883,11 @@
         // Reset form
         document.getElementById('editFieldSelect').value = '';
         document.getElementById('editValue').value = '';
+        document.getElementById('editValueSelect').value = '';
+        document.getElementById('editValue').style.display = '';
+        document.getElementById('editValueSelect').style.display = 'none';
+        document.getElementById('editValue').required = true;
+        document.getElementById('editValueSelect').required = false;
         
         // Focus on field select
         document.getElementById('editFieldSelect').focus();
@@ -883,7 +898,44 @@
         const modal = document.getElementById('editModal');
         modal.classList.remove('show');
         currentEditRow = null;
+        
+        // Reset form fields
+        document.getElementById('editFieldSelect').value = '';
+        document.getElementById('editValue').value = '';
+        document.getElementById('editValueSelect').value = '';
+        document.getElementById('editValue').style.display = '';
+        document.getElementById('editValueSelect').style.display = 'none';
+        document.getElementById('editValue').required = true;
+        document.getElementById('editValueSelect').required = false;
       }
+      
+      // Handle field selection change to toggle between input and dropdown
+      document.getElementById('editFieldSelect').addEventListener('change', (e) => {
+        const field = e.target.value;
+        const textInput = document.getElementById('editValue');
+        const selectInput = document.getElementById('editValueSelect');
+        
+        if (field === 'OAstatus') {
+          // Show dropdown for status, hide text input
+          textInput.style.display = 'none';
+          textInput.required = false;
+          selectInput.style.display = '';
+          selectInput.required = true;
+          
+          // Set current status value if available
+          if (currentEditRow) {
+            const currentStatus = currentEditRow['OA fund status'] || '';
+            selectInput.value = currentStatus;
+          }
+        } else {
+          // Show text input for other fields, hide dropdown
+          textInput.style.display = '';
+          textInput.required = true;
+          selectInput.style.display = 'none';
+          selectInput.required = false;
+          textInput.value = '';
+        }
+      });
       
       // Handle form submission
       document.getElementById('editForm').addEventListener('submit', async (e) => {
@@ -892,7 +944,9 @@
         if (!currentEditRow) return;
         
         const field = document.getElementById('editFieldSelect').value;
-        const value = document.getElementById('editValue').value;
+        const textInput = document.getElementById('editValue');
+        const selectInput = document.getElementById('editValueSelect');
+        const value = field === 'OAstatus' ? selectInput.value : textInput.value;
         
         if (!field || !value) {
           alert('Please select a field and enter a value.');
@@ -908,6 +962,7 @@
           closeEditModal();
           // Refresh data to show changes
           loadData();
+          loadBudget(); // Refresh budget in case status change affects it
           statusEl.textContent = `Field "${field}" updated successfully.`;
         } catch (error) {
           alert('Failed to save edit: ' + error.message);

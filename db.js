@@ -97,25 +97,6 @@ export async function initDatabase() {
 		)
 	`)
 
-	// Create budget_current table (current state snapshot)
-	await runQuery(db, `
-		CREATE TABLE IF NOT EXISTS budget_current (
-			id INTEGER PRIMARY KEY CHECK (id = 1),
-			total_amount REAL NOT NULL DEFAULT 0,
-			running_total REAL NOT NULL DEFAULT 0,
-			last_updated TEXT NOT NULL,
-			updated_by TEXT
-		)
-	`)
-
-	// Initialize budget_current if empty
-	const currentBudget = await getQuery(db, `SELECT * FROM budget_current WHERE id = 1`)
-	if (!currentBudget) {
-		await runQuery(db, `
-			INSERT INTO budget_current (id, total_amount, running_total, last_updated)
-			VALUES (1, 0, 0, ?)
-		`, [new Date().toISOString()])
-	}
 
 	// Create urls table
 	await runQuery(db, `
@@ -124,6 +105,19 @@ export async function initDatabase() {
 			timestamp TEXT NOT NULL,
 			url TEXT NOT NULL,
 			email TEXT NOT NULL
+		)
+	`)
+
+	// Create files table
+	await runQuery(db, `
+		CREATE TABLE IF NOT EXISTS files (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			timestamp TEXT NOT NULL,
+			filename TEXT NOT NULL,
+			original_filename TEXT NOT NULL,
+			email TEXT NOT NULL,
+			file_size INTEGER NOT NULL,
+			file_path TEXT NOT NULL
 		)
 	`)
 
@@ -140,6 +134,8 @@ export async function initDatabase() {
 	await runQuery(db, `CREATE INDEX IF NOT EXISTS idx_requests_status ON requests(oa_fund_status)`)
 	await runQuery(db, `CREATE INDEX IF NOT EXISTS idx_budget_timestamp ON budget(timestamp)`)
 	await runQuery(db, `CREATE INDEX IF NOT EXISTS idx_urls_timestamp ON urls(timestamp)`)
+	await runQuery(db, `CREATE INDEX IF NOT EXISTS idx_files_timestamp ON files(timestamp)`)
+	await runQuery(db, `CREATE INDEX IF NOT EXISTS idx_files_email ON files(email)`)
 
 	return db
 }
@@ -373,53 +369,19 @@ export async function getAllBudgetRecords() {
 export async function getLatestBudget() {
 	const db = await getDatabase()
 	try {
-		// Try to get from current state table first (faster)
-		const current = await getQuery(db, `SELECT * FROM budget_current WHERE id = 1`)
-		if (current) {
+		const latest = await getQuery(db, `SELECT * FROM budget ORDER BY timestamp DESC LIMIT 1`)
+		if (!latest) {
+			// Return default values if no budget records exist
 			return {
-				timestamp: current.last_updated,
-				total_amount: current.total_amount,
-				running_total: current.running_total,
+				timestamp: new Date().toISOString(),
+				total_amount: 0,
+				running_total: 0,
 				change_amount: 0,
 				running_total_change: 0,
 				reason: null
 			}
 		}
-		// Fallback to history table
-		return await getQuery(db, `SELECT * FROM budget ORDER BY timestamp DESC LIMIT 1`)
-	} finally {
-		db.close()
-	}
-}
-
-// Get current budget state (from budget_current table)
-export async function getCurrentBudget() {
-	const db = await getDatabase()
-	try {
-		const current = await getQuery(db, `SELECT * FROM budget_current WHERE id = 1`)
-		if (!current) {
-			// Initialize if empty
-			const latest = await getQuery(db, `SELECT * FROM budget ORDER BY timestamp DESC LIMIT 1`)
-			if (latest) {
-				await runQuery(db, `
-					INSERT INTO budget_current (id, total_amount, running_total, last_updated)
-					VALUES (1, ?, ?, ?)
-				`, [latest.total_amount || 0, latest.running_total || 0, latest.timestamp || new Date().toISOString()])
-				return {
-					total_amount: latest.total_amount || 0,
-					running_total: latest.running_total || 0,
-					last_updated: latest.timestamp || new Date().toISOString(),
-					updated_by: null
-				}
-			}
-			return {
-				total_amount: 0,
-				running_total: 0,
-				last_updated: new Date().toISOString(),
-				updated_by: null
-			}
-		}
-		return current
+		return latest
 	} finally {
 		db.close()
 	}
@@ -428,7 +390,6 @@ export async function getCurrentBudget() {
 export async function addBudgetRecord(data) {
 	const db = await getDatabase()
 	try {
-		// Add to history table
 		await runQuery(db, `
 			INSERT INTO budget (timestamp, total_amount, change_amount, reason, running_total, running_total_change)
 			VALUES (?, ?, ?, ?, ?, ?)
@@ -440,22 +401,6 @@ export async function addBudgetRecord(data) {
 			data.running_total || 0,
 			data.running_total_change || 0
 		])
-
-		// Update current state table
-		await runQuery(db, `
-			UPDATE budget_current 
-			SET total_amount = ?, 
-				running_total = ?, 
-				last_updated = ?,
-				updated_by = ?
-			WHERE id = 1
-		`, [
-			data.total_amount,
-			data.running_total || 0,
-			data.timestamp,
-			data.updated_by || null
-		])
-
 		return true
 	} finally {
 		db.close()
@@ -464,10 +409,6 @@ export async function addBudgetRecord(data) {
 
 export async function changeBudgetTotal(amount, reason, updatedBy = null) {
 	const latest = await getLatestBudget()
-	if (!latest) {
-		throw new Error('No budget record found')
-	}
-
 	const newTotal = (latest.total_amount || 0) + amount
 	return await addBudgetRecord({
 		timestamp: new Date().toISOString(),
@@ -475,17 +416,12 @@ export async function changeBudgetTotal(amount, reason, updatedBy = null) {
 		change_amount: amount,
 		reason: reason,
 		running_total: latest.running_total || 0,
-		running_total_change: 0,
-		updated_by: updatedBy
+		running_total_change: 0
 	})
 }
 
 export async function changeRunningTotal(amount, reason, updatedBy = null) {
 	const latest = await getLatestBudget()
-	if (!latest) {
-		throw new Error('No budget record found')
-	}
-
 	const newRunningTotal = (latest.running_total || 0) + amount
 	return await addBudgetRecord({
 		timestamp: new Date().toISOString(),
@@ -493,38 +429,35 @@ export async function changeRunningTotal(amount, reason, updatedBy = null) {
 		change_amount: 0,
 		reason: reason,
 		running_total: newRunningTotal,
-		running_total_change: amount,
-		updated_by: updatedBy
+		running_total_change: amount
 	})
 }
 
 export async function setBudgetTotal(totalAmount, reason, updatedBy = null) {
 	const latest = await getLatestBudget()
-	const changeAmount = latest ? (totalAmount - latest.total_amount) : totalAmount
+	const changeAmount = latest.total_amount !== undefined ? (totalAmount - latest.total_amount) : totalAmount
 
 	return await addBudgetRecord({
 		timestamp: new Date().toISOString(),
 		total_amount: totalAmount,
 		change_amount: changeAmount,
 		reason: reason,
-		running_total: latest ? latest.running_total : 0,
-		running_total_change: 0,
-		updated_by: updatedBy
+		running_total: latest.running_total || 0,
+		running_total_change: 0
 	})
 }
 
 export async function setRunningTotal(totalAmount, reason, updatedBy = null) {
 	const latest = await getLatestBudget()
-	const changeAmount = latest ? (totalAmount - (latest.running_total || 0)) : totalAmount
+	const changeAmount = latest.running_total !== undefined ? (totalAmount - (latest.running_total || 0)) : totalAmount
 
 	return await addBudgetRecord({
 		timestamp: new Date().toISOString(),
-		total_amount: latest ? latest.total_amount : 0,
+		total_amount: latest.total_amount || 0,
 		change_amount: 0,
 		reason: reason,
 		running_total: totalAmount,
-		running_total_change: changeAmount,
-		updated_by: updatedBy
+		running_total_change: changeAmount
 	})
 }
 
@@ -551,6 +484,70 @@ export async function getAllURLs() {
 			'URL': row.url,
 			'Email': row.email
 		}))
+	} finally {
+		db.close()
+	}
+}
+
+// Files operations
+export async function addFile(filename, originalFilename, email, fileSize, filePath) {
+	const db = await getDatabase()
+	try {
+		await runQuery(db, `
+			INSERT INTO files (timestamp, filename, original_filename, email, file_size, file_path)
+			VALUES (?, ?, ?, ?, ?, ?)
+		`, [
+			new Date().toISOString(),
+			filename,
+			originalFilename,
+			email,
+			fileSize,
+			filePath
+		])
+		return true
+	} finally {
+		db.close()
+	}
+}
+
+export async function getAllFiles() {
+	const db = await getDatabase()
+	try {
+		const rows = await allQuery(db, `SELECT * FROM files ORDER BY timestamp DESC`)
+		return rows.map(row => ({
+			name: row.filename,
+			originalName: row.original_filename,
+			size: row.file_size,
+			mtime: row.timestamp,
+			url: `/files/${encodeURIComponent(row.filename)}`,
+			email: row.email
+		}))
+	} finally {
+		db.close()
+	}
+}
+
+export async function getFilesByEmail(email) {
+	const db = await getDatabase()
+	try {
+		const rows = await allQuery(db, `SELECT * FROM files WHERE email = ? ORDER BY timestamp DESC`, [email])
+		return rows.map(row => ({
+			name: row.filename,
+			originalName: row.original_filename,
+			size: row.file_size,
+			mtime: row.timestamp,
+			url: `/files/${encodeURIComponent(row.filename)}`,
+			email: row.email
+		}))
+	} finally {
+		db.close()
+	}
+}
+
+export async function getFileByFilename(filename) {
+	const db = await getDatabase()
+	try {
+		return await getQuery(db, `SELECT * FROM files WHERE filename = ?`, [filename])
 	} finally {
 		db.close()
 	}

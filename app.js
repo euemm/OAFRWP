@@ -92,20 +92,38 @@ const filesRouter = express.Router()
 const FILES_DIR = path.join(__dirname, 'files')
 filesRouter.get('/', async (req, res, next) => {
 	try {
-		const entries = await fsp.readdir(FILES_DIR, { withFileTypes: true })
-		const files = []
-		for (const d of entries) {
-			if (!d.isFile()) continue
-			if (d.name.startsWith('.')) continue
-			const full = path.join(FILES_DIR, d.name)
-			const st = await fsp.stat(full)
-			files.push({
-				name: d.name,
-				size: st.size,
-				mtime: st.mtime.toISOString(),
-				url: `/files/${encodeURIComponent(d.name)}`
-			})
+		// Get files from database (preferred method)
+		const files = await db.getAllFiles()
+		
+		// Also check filesystem for any files not in database (backward compatibility)
+		// This handles files uploaded before database tracking was added
+		try {
+			const entries = await fsp.readdir(FILES_DIR, { withFileTypes: true })
+			const dbFilenames = new Set(files.map(f => f.name))
+			
+			for (const d of entries) {
+				if (!d.isFile()) continue
+				if (d.name.startsWith('.')) continue
+				if (dbFilenames.has(d.name)) continue // Already in database
+				
+				// File exists on disk but not in database - add to response
+				const full = path.join(FILES_DIR, d.name)
+				const st = await fsp.stat(full)
+				files.push({
+					name: d.name,
+					originalName: d.name,
+					size: st.size,
+					mtime: st.mtime.toISOString(),
+					url: `/files/${encodeURIComponent(d.name)}`,
+					email: null // Unknown email for files not in database
+				})
+			}
+		} catch (fsError) {
+			// If filesystem read fails, just use database files
+			console.warn('Could not read files directory:', fsError.message)
 		}
+		
+		// Sort by timestamp (mtime) descending
 		files.sort((a, b) => b.mtime.localeCompare(a.mtime))
 		return res.json({ files })
 	} catch (err) {
@@ -192,16 +210,35 @@ app.get('/login', (req, res) => {
 
 })
 
-app.post('/upload', upload.array('pdfs', 10), (req, res) => {
+app.post('/upload', upload.array('pdfs', 10), async (req, res) => {
 
-	const files = (req.files || []).map(f => ({
-		originalName: f.originalName,
-		filename: f.filename,
-		size: f.size,
-		url: `/files/${encodeURIComponent(f.filename)}`
-	}))
+	try {
+		const email = req.body.email || ''
+		const uploadedFiles = []
 
-	res.status(201).json({ uploaded: files })
+		for (const f of req.files || []) {
+			// Save file metadata to database
+			await db.addFile(
+				f.filename,
+				f.originalname,
+				email,
+				f.size,
+				f.path
+			)
+
+			uploadedFiles.push({
+				originalName: f.originalname,
+				filename: f.filename,
+				size: f.size,
+				url: `/files/${encodeURIComponent(f.filename)}`
+			})
+		}
+
+		res.status(201).json({ uploaded: uploadedFiles })
+	} catch (error) {
+		console.error('Error uploading files:', error)
+		res.status(500).json({ error: 'Failed to upload files' })
+	}
 
 })
 

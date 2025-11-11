@@ -189,12 +189,13 @@ node migrate.js
 
 The migration script will:
 - Create `oafrwp.db` SQLite database
-- Create all tables (requests, budget, budget_current, urls, credentials)
+- Create all tables (requests, budget, urls, files, credentials)
 - Import data from:
   - ✅ `requests.csv`
   - ✅ `budget.csv`
   - ✅ `cred.csv` (user credentials)
   - ✅ `urls.csv` (if exists)
+- **Note**: Files table is created but files are not migrated from filesystem (files uploaded after migration will be tracked automatically)
 
 #### Step 3: Test Migration
 ```bash
@@ -227,7 +228,9 @@ sqlite3 oafrwp.db
 SELECT COUNT(*) FROM requests;
 SELECT COUNT(*) FROM budget;
 SELECT COUNT(*) FROM credentials;
-SELECT * FROM budget_current;
+
+# Get latest budget
+SELECT * FROM budget ORDER BY timestamp DESC LIMIT 1;
 
 # Exit
 .quit
@@ -291,10 +294,11 @@ chmod 644 oafrwp.db-shm    # If WAL mode is enabled
 ```
 
 #### 4. Performance Benefits
-- **Faster queries**: Database indexes improve query speed
+- **Faster queries**: Database indexes (especially on timestamp fields) improve query speed
 - **Better concurrency**: SQLite handles concurrent reads efficiently
 - **Data integrity**: ACID transactions prevent data corruption
 - **Easy backup**: Single file backup (`oafrwp.db`)
+- **Efficient budget queries**: Indexed timestamp column makes getting latest budget state fast
 
 #### 5. Rollback Plan (If Needed)
 If you need to rollback:
@@ -307,10 +311,11 @@ If you need to rollback:
 ### What's Different After Migration
 
 1. **No more CSV file operations** - All data is in SQLite
-2. **Faster queries** - Database queries are faster than CSV parsing
+2. **Faster queries** - Database queries are faster than CSV parsing (with indexes on timestamp fields)
 3. **Better data integrity** - SQLite provides ACID transactions
-4. **Budget tracking** - New `budget_current` table for quick state lookup
+4. **Budget history tracking** - All budget changes are stored in the budget table with timestamps
 5. **Credentials in database** - User credentials are now in the database instead of CSV
+6. **File tracking** - Uploaded files are now tracked in the database with metadata (email, timestamp, original filename, size)
 
 ## API Documentation
 
@@ -375,8 +380,9 @@ Mark payment as planned
 
 #### POST /upload
 Upload PDF files
-- **Body**: `multipart/form-data` with `pdfs` field
+- **Body**: `multipart/form-data` with `pdfs` field and `email` field
 - **Response**: `{ "uploaded": [file_objects] }`
+- **Note**: File metadata (email, timestamp, filename, size) is automatically saved to database
 
 #### POST /uploadURL
 Submit document URL
@@ -387,6 +393,7 @@ Submit document URL
 List uploaded files (Admin only)
 - **Headers**: `Authorization: Bearer <token>`
 - **Response**: `{ "files": [file_objects] }`
+- **Note**: Returns files from database with metadata (email, timestamp, original filename, size). Also includes files from filesystem that aren't in database yet (backward compatibility)
 
 #### GET /urls
 List submitted URLs (Admin only)
@@ -438,25 +445,18 @@ Debug SSO attributes
 | comment | TEXT | Additional comments |
 | oa_fund_status | TEXT | Request status |
 
-### Budget Table (History)
+### Budget Table
 | Column | Type | Description |
 |--------|------|-------------|
 | id | INTEGER PRIMARY KEY | Auto-increment ID |
 | timestamp | TEXT | ISO timestamp of change |
-| total_amount | REAL | Current total budget |
-| change_amount | REAL | Amount changed |
+| total_amount | REAL | Total budget at this point in time |
+| change_amount | REAL | Amount changed in this transaction |
 | reason | TEXT | Reason for change |
-| running_total | REAL | Running total of commitments |
-| running_total_change | REAL | Change to running total |
+| running_total | REAL | Running total of commitments at this point |
+| running_total_change | REAL | Change to running total in this transaction |
 
-### Budget Current Table
-| Column | Type | Description |
-|--------|------|-------------|
-| id | INTEGER PRIMARY KEY | Always 1 (single row) |
-| total_amount | REAL | Current total budget |
-| running_total | REAL | Current running total |
-| last_updated | TEXT | ISO timestamp of last update |
-| updated_by | TEXT | Optional user who made change |
+**Note**: The latest budget record (ordered by timestamp DESC) represents the current budget state. An index on `timestamp` ensures fast queries for the current state.
 
 ### URLs Table
 | Column | Type | Description |
@@ -465,6 +465,17 @@ Debug SSO attributes
 | timestamp | TEXT | ISO timestamp of submission |
 | url | TEXT | Submitted URL |
 | email | TEXT | Submitter's email |
+
+### Files Table
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER PRIMARY KEY | Auto-increment ID |
+| timestamp | TEXT | ISO timestamp of upload |
+| filename | TEXT | Stored filename on disk |
+| original_filename | TEXT | Original filename from user |
+| email | TEXT | Submitter's email |
+| file_size | INTEGER | File size in bytes |
+| file_path | TEXT | Full path to file on disk |
 
 ### Credentials Table
 | Column | Type | Description |
@@ -743,7 +754,7 @@ For technical support or questions:
 
 ### Version 2.0.0
 - Migrated from CSV to SQLite database
-- Added budget_current table for efficient state tracking
+- Budget history tracking with indexed timestamp queries
 - Converted user management script from Python to JavaScript
 - Improved performance and data integrity
 - Better backup and recovery options
